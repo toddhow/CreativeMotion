@@ -1,4 +1,5 @@
 # Task: M1 Physics interface and Jolt backend
+Status: done — approved by toddhow on 2026-10-16, including the CMake include check and the review amendments.
 Design doc section: CLAUDE.md → "First milestones" → M1. **The design doc's interface section is not in the repository; toddhow approved drafting the interface here from the guide (2026-10-16). Reconcile with the design doc once it is exported.**
 Goal: A thin, engine-neutral physics interface (headers only) and a Jolt implementation of it, good enough to build, drive, read, query and step a ragdoll's rigid bodies and joints.
 Inputs / outputs: new `physics/interface/` (headers, CMake INTERFACE target `opas::physics_interface`); `physics/jolt/` gains the backend and a factory; `tests/unit/physics_interface/`, `tests/unit/physics_jolt/`; new `tools/CheckJoltIncludes.cmake` (a CMake script, since it then runs anywhere CMake does) with ctest self-tests and a CI job. The M0 `BackendInfo` helpers are kept.

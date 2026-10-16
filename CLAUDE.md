@@ -163,17 +163,17 @@ Seven milestones take the project from an empty repository to a ragdoll that bal
 ### M0 Bootstrap
 
 - [ ] CMake project with Debug, Release and ASan presets builds on Windows and Linux
-- [ ] GoogleTest wired in with one passing test
-- [ ] Jolt fetched at a pinned version and linked only into `physics/jolt`
+- [x] GoogleTest wired in with one passing test
+- [x] Jolt fetched at a pinned version and linked only into `physics/jolt`
 - [ ] CI runs build, format, lint, tests and sanitizers on every merge request
 - [ ] This guide committed as `CLAUDE.md`; design docs exported into `docs/`
 
 ### M1 Physics interface and Jolt backend
 
-- [ ] Interface covers build, drive, read, query, step and ownership, as in the design doc
-- [ ] A box dropped on a floor comes to rest at the expected height within tolerance
-- [ ] Two identical runs produce identical results
-- [ ] CI check fails if a Jolt header is included outside `physics/jolt`
+- [x] Interface covers build, drive, read, query, step and ownership, as in the design doc (drafted from this guide in `docs/tasks/0001`, approved by toddhow; reconcile once the design doc is exported)
+- [x] A box dropped on a floor comes to rest at the expected height within tolerance
+- [x] Two identical runs produce identical results
+- [x] CI check fails if a Jolt header is included outside `physics/jolt` (job written; first GitLab run pending)
 
 ### M2 Rig and profile formats
 
