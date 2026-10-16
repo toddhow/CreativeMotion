@@ -1,1 +1,65 @@
-// Implementation pending (A1): written after the tests.
+#include "opas/rig/Skeleton.hpp"
+
+#include <cmath>
+#include <set>
+
+namespace opas::rig {
+namespace {
+
+// How far a rest rotation may be from unit length. Authored data passes
+// through text, so allow round-off but catch real mistakes.
+constexpr double kUnitTolerance = 1e-6;
+
+std::string describe(std::size_t index, const Bone& bone)
+{
+    return "bone " + std::to_string(index) + " (\"" + bone.name + "\")";
+}
+
+} // namespace
+
+std::string validateSkeleton(const Skeleton& skeleton)
+{
+    std::set<std::string> seen;
+    for (std::size_t i = 0; i < skeleton.bones.size(); ++i) {
+        const Bone& bone = skeleton.bones[i];
+        if (bone.name.empty()) {
+            return describe(i, bone) + ": name must not be empty";
+        }
+        if (!seen.insert(bone.name).second) {
+            return describe(i, bone) + ": name is used by an earlier bone";
+        }
+        if (bone.parent < -1 || (bone.parent >= 0 && static_cast<std::size_t>(bone.parent) >= i)) {
+            return describe(i, bone) + ": parent must be -1 or the index of an earlier bone, got " +
+                   std::to_string(bone.parent);
+        }
+        if (std::abs(math::length(bone.localRest.rotation) - 1.0) > kUnitTolerance) {
+            return describe(i, bone) + ": localRest.rotation must be a unit quaternion";
+        }
+    }
+    return {};
+}
+
+std::optional<std::size_t> findBone(const Skeleton& skeleton, std::string_view name)
+{
+    for (std::size_t i = 0; i < skeleton.bones.size(); ++i) {
+        if (skeleton.bones[i].name == name) {
+            return i;
+        }
+    }
+    return std::nullopt;
+}
+
+std::vector<math::Transform> computeWorldRest(const Skeleton& skeleton)
+{
+    std::vector<math::Transform> world;
+    world.reserve(skeleton.bones.size());
+    for (const Bone& bone : skeleton.bones) {
+        // Parents come first, so world[parent] is already computed.
+        world.push_back(bone.parent < 0
+                            ? bone.localRest
+                            : world[static_cast<std::size_t>(bone.parent)] * bone.localRest);
+    }
+    return world;
+}
+
+} // namespace opas::rig

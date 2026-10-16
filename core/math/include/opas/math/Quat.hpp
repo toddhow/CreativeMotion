@@ -74,10 +74,14 @@ constexpr Vec3 rotate(Quat q, Vec3 v)
 }
 
 // Smallest angle (in [0, pi]) of the rotation taking a to b. q and -q give 0.
+// Uses atan2 of the relative rotation's vector and scalar parts rather than
+// acos of a dot product: acos is inaccurate near 0 (about 1e-8 rad), atan2
+// stays accurate for tiny angles. |w| picks the shorter path.
 inline double angleBetween(Quat a, Quat b)
 {
-    const double d = std::min(1.0, std::abs(dot(normalized(a), normalized(b))));
-    return 2.0 * std::acos(d);
+    const Quat r = conjugate(normalized(a)) * normalized(b);
+    const double vectorPart = std::sqrt(r.x * r.x + r.y * r.y + r.z * r.z);
+    return 2.0 * std::atan2(vectorPart, std::abs(r.w));
 }
 
 // Shortest-arc rotation taking direction `from` onto direction `to` (neither
