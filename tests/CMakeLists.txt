@@ -2,6 +2,13 @@
 # Add new test files to the list below, grouped by folder.
 add_executable(opas_tests
   unit/SmokeTest.cpp
+  unit/core_math/QuatTest.cpp
+  unit/core_math/TransformTest.cpp
+  unit/core_math/Vec3Test.cpp
+  unit/core_rig/SkeletonTest.cpp
+  unit/kinematic_ik/TwoBoneIkTest.cpp
+  unit/kinematic_markers/BodyMeasurementsTest.cpp
+  unit/kinematic_markers/MarkerLoadTest.cpp
   unit/physics_jolt/BackendInfoTest.cpp
   unit/physics_jolt/BoxDropTest.cpp
   unit/physics_jolt/DeterminismTest.cpp
@@ -13,12 +20,25 @@ add_executable(opas_tests
   unit/physics_jolt/SeveralWorldsTest.cpp
   unit/physics_jolt/StepListenerTest.cpp
   unit/physics_jolt/ValidationTest.cpp
+  property/core_math/QuatNormalizationPropertyTest.cpp
+  property/kinematic_ik/TwoBoneIkPropertyTest.cpp
+  roundtrip/kinematic_markers/MarkerRoundTripTest.cpp
 )
 
 target_link_libraries(opas_tests PRIVATE
   opas::physics_jolt
+  opas::math
+  opas::rig
+  opas::ik
+  opas::markers
   GTest::gtest_main
 )
+# Helpers shared by the kinematic tests (seeded random numbers, comparisons,
+# synthetic marker texts) live in tests/common.
+target_include_directories(opas_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common)
+# Small synthetic marker files for the file-loading tests.
+target_compile_definitions(opas_tests PRIVATE
+  OPAS_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 opas_set_project_options(opas_tests)
 
 # Interface-only runner. It links nothing but the interface headers and

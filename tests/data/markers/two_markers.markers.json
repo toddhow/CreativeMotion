@@ -1,0 +1,26 @@
+{
+  "format": "opas.markers",
+  "version": 1,
+  "markers": [
+    {
+      "id": "rightHandOnShoulder",
+      "sourceBone": "RightHand",
+      "targetRegion": "LeftUpperArm",
+      "offsetM": [0.02, -0.01, 0.12],
+      "contactDirection": [0, 0, -1],
+      "window": {"startS": 1.25, "endS": 2},
+      "priority": 1,
+      "toleranceM": 0.02
+    },
+    {
+      "id": "leftFootOnFloor",
+      "sourceBone": "LeftFoot",
+      "targetRegion": "Floor",
+      "offsetM": [0, 0, 0],
+      "contactDirection": [1, 0, 0],
+      "window": {"startS": 0, "endS": 0.5},
+      "priority": -3,
+      "toleranceM": 0.005
+    }
+  ]
+}
