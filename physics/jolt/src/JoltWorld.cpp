@@ -1,0 +1,793 @@
+#include "opas/physics/jolt/JoltWorld.hpp"
+
+#include "JoltRuntime.hpp"
+
+// Jolt requires Jolt.h before any other Jolt header.
+#include <Jolt/Jolt.h>
+
+#include <Jolt/Core/JobSystemSingleThreaded.h>
+#include <Jolt/Core/TempAllocator.h>
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Body/BodyFilter.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
+#include <Jolt/Physics/PhysicsSettings.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <memory>
+#include <numbers>
+#include <optional>
+#include <string>
+#include <type_traits>
+#include <variant>
+#include <vector>
+
+namespace opas::physics::jolt {
+namespace {
+
+// --- Tuning constants ---------------------------------------------------------
+
+// Scratch memory Jolt uses during each step; 10 MB is what Jolt's HelloWorld
+// sample uses and is far more than a few ragdolls need.
+constexpr std::uint32_t kTempAllocatorBytes = 10U * 1024U * 1024U;
+// Jolt asks for upper bounds on broad-phase pairs and contact constraints.
+// A ragdoll body touches few others; 4 per body leaves generous headroom.
+constexpr std::uint32_t kPairsPerBody = 4;
+constexpr std::uint32_t kMinPairs = 1024;
+// How far an axis may be from unit length, or two axes from perpendicular,
+// before a description is rejected. Loose enough for float round-off from
+// authored data.
+constexpr float kAxisTolerance = 1e-3f;
+
+// Position-solver iterations for joints (Jolt's world default is 2).
+// Jolt corrects a joint-limit violation over several iterations rather than
+// preventing it, so a fast limb overshoots its limit for a few steps. Measured
+// with the M1 limit test (10 rad/s into a 30 degree twist limit at 60 Hz):
+// 2 -> 35.2 deg, 4 -> 33.3, 6 -> 32.1, 8 -> ~31.4, 10 -> ~31. 10 keeps the
+// spec's 2 degree tolerance with margin. Costs solver time per joint island;
+// revisit against docs/budgets.md.
+constexpr JPH::uint kJointPositionSteps = 10;
+
+constexpr float kPi = std::numbers::pi_v<float>;
+
+// --- Collision layers -----------------------------------------------------------
+// Two layers, as in Jolt's HelloWorld sample: static bodies never need to be
+// tested against each other.
+
+namespace Layers {
+constexpr JPH::ObjectLayer kNonMoving = 0;
+constexpr JPH::ObjectLayer kMoving = 1;
+} // namespace Layers
+
+namespace BroadPhaseLayers {
+constexpr JPH::BroadPhaseLayer kNonMoving(0);
+constexpr JPH::BroadPhaseLayer kMoving(1);
+constexpr JPH::uint kCount = 2;
+} // namespace BroadPhaseLayers
+
+class BroadPhaseLayerMap final : public JPH::BroadPhaseLayerInterface {
+public:
+    [[nodiscard]] JPH::uint GetNumBroadPhaseLayers() const override
+    {
+        return BroadPhaseLayers::kCount;
+    }
+
+    [[nodiscard]] JPH::BroadPhaseLayer GetBroadPhaseLayer(JPH::ObjectLayer layer) const override
+    {
+        return layer == Layers::kNonMoving ? BroadPhaseLayers::kNonMoving
+                                           : BroadPhaseLayers::kMoving;
+    }
+
+#if defined(JPH_EXTERNAL_PROFILE) || defined(JPH_PROFILE_ENABLED)
+    [[nodiscard]] const char* GetBroadPhaseLayerName(JPH::BroadPhaseLayer layer) const override
+    {
+        return layer == BroadPhaseLayers::kNonMoving ? "NonMoving" : "Moving";
+    }
+#endif
+};
+
+class ObjectVsBroadPhaseFilter final : public JPH::ObjectVsBroadPhaseLayerFilter {
+public:
+    [[nodiscard]] bool ShouldCollide(JPH::ObjectLayer layer,
+                                     JPH::BroadPhaseLayer broadPhaseLayer) const override
+    {
+        return layer == Layers::kMoving || broadPhaseLayer == BroadPhaseLayers::kMoving;
+    }
+};
+
+class ObjectPairFilter final : public JPH::ObjectLayerPairFilter {
+public:
+    [[nodiscard]] bool ShouldCollide(JPH::ObjectLayer a, JPH::ObjectLayer b) const override
+    {
+        return a == Layers::kMoving || b == Layers::kMoving;
+    }
+};
+
+// --- Conversions between our types and Jolt's ---------------------------------
+
+JPH::Vec3 toJolt(Vec3 v)
+{
+    return {v.x, v.y, v.z};
+}
+
+JPH::Quat toJolt(Quat q)
+{
+    return {q.x, q.y, q.z, q.w};
+}
+
+Vec3 fromJolt(JPH::Vec3Arg v)
+{
+    return {v.GetX(), v.GetY(), v.GetZ()};
+}
+
+Quat fromJolt(JPH::QuatArg q)
+{
+    return {q.GetX(), q.GetY(), q.GetZ(), q.GetW()};
+}
+
+// --- Validation helpers ---------------------------------------------------------
+
+float length(Vec3 v)
+{
+    return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+}
+
+float dot(Vec3 a, Vec3 b)
+{
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+bool isUnit(Vec3 v)
+{
+    return std::abs(length(v) - 1.0f) <= kAxisTolerance;
+}
+
+bool isUnit(Quat q)
+{
+    const float len = std::sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
+    return std::abs(len - 1.0f) <= kAxisTolerance;
+}
+
+bool isFinite(Vec3 v)
+{
+    return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
+}
+
+template <typename Id>
+CreateResult<Id> failure(ErrorCode code, std::string message)
+{
+    return CreateResult<Id>{Id{}, code, std::move(message)};
+}
+
+// Returns an empty string if the shape is valid, otherwise a message naming
+// the bad field.
+std::string validateShape(const Shape& shape)
+{
+    if (const auto* box = std::get_if<BoxShape>(&shape)) {
+        const Vec3 h = box->halfExtentsM;
+        if (!(h.x > 0.0f && h.y > 0.0f && h.z > 0.0f) || !isFinite(h)) {
+            return "BoxShape.halfExtentsM must be > 0 on every axis";
+        }
+    } else if (const auto* sphere = std::get_if<SphereShape>(&shape)) {
+        if (!(sphere->radiusM > 0.0f) || !std::isfinite(sphere->radiusM)) {
+            return "SphereShape.radiusM must be > 0";
+        }
+    } else if (const auto* capsule = std::get_if<CapsuleShape>(&shape)) {
+        if (!(capsule->radiusM > 0.0f) || !std::isfinite(capsule->radiusM)) {
+            return "CapsuleShape.radiusM must be > 0";
+        }
+        if (!(capsule->halfHeightM > 0.0f) || !std::isfinite(capsule->halfHeightM)) {
+            return "CapsuleShape.halfHeightM must be > 0";
+        }
+    }
+    return {};
+}
+
+std::string validateBody(const BodyDesc& desc)
+{
+    if (std::string shapeError = validateShape(desc.shape); !shapeError.empty()) {
+        return shapeError;
+    }
+    if (desc.motion == MotionType::Dynamic &&
+        (!(desc.massKg > 0.0f) || !std::isfinite(desc.massKg))) {
+        return "massKg must be > 0 for a dynamic body";
+    }
+    if (!isFinite(desc.positionM)) {
+        return "positionM must be finite";
+    }
+    if (!isUnit(desc.rotation)) {
+        return "rotation must be a unit quaternion";
+    }
+    if (!(desc.friction >= 0.0f)) {
+        return "friction must be >= 0";
+    }
+    if (!(desc.restitution >= 0.0f && desc.restitution <= 1.0f)) {
+        return "restitution must be in [0, 1]";
+    }
+    if (!(desc.linearDamping >= 0.0f)) {
+        return "linearDamping must be >= 0";
+    }
+    if (!(desc.angularDamping >= 0.0f)) {
+        return "angularDamping must be >= 0";
+    }
+    return {};
+}
+
+// Body/handle checks are done by the world; this covers the geometric fields.
+// Angle ranges are the ones Jolt documents for SwingTwistConstraintSettings.
+std::string validateJointGeometry(const JointDesc& desc)
+{
+    if (!isFinite(desc.anchorM)) {
+        return "anchorM must be finite";
+    }
+    if (!isUnit(desc.twistAxis)) {
+        return "twistAxis must be unit length";
+    }
+    if (!isUnit(desc.planeAxis)) {
+        return "planeAxis must be unit length";
+    }
+    if (std::abs(dot(desc.twistAxis, desc.planeAxis)) > kAxisTolerance) {
+        return "planeAxis must be perpendicular to twistAxis";
+    }
+    if (!(desc.normalHalfConeRad >= 0.0f && desc.normalHalfConeRad <= kPi)) {
+        return "normalHalfConeRad must be in [0, pi]";
+    }
+    if (!(desc.planeHalfConeRad >= 0.0f && desc.planeHalfConeRad <= kPi)) {
+        return "planeHalfConeRad must be in [0, pi]";
+    }
+    if (!(desc.twistMinRad >= -kPi && desc.twistMinRad <= kPi)) {
+        return "twistMinRad must be in [-pi, pi]";
+    }
+    if (!(desc.twistMaxRad >= -kPi && desc.twistMaxRad <= kPi)) {
+        return "twistMaxRad must be in [-pi, pi]";
+    }
+    if (desc.twistMinRad > desc.twistMaxRad) {
+        return "twistMinRad must be <= twistMaxRad";
+    }
+    return {};
+}
+
+std::string validateConfig(const WorldConfig& config)
+{
+    if (!(config.fixedStepSeconds > 0.0f) || !std::isfinite(config.fixedStepSeconds)) {
+        return "fixedStepSeconds must be > 0";
+    }
+    if (!isFinite(config.gravityMps2)) {
+        return "gravityMps2 must be finite";
+    }
+    if (config.maxBodies == 0) {
+        return "maxBodies must be > 0";
+    }
+    if (config.maxJoints == 0) {
+        return "maxJoints must be > 0";
+    }
+    return {};
+}
+
+JPH::ShapeRefC createJoltShape(const Shape& shape)
+{
+    JPH::ShapeSettings::ShapeResult result;
+    if (const auto* box = std::get_if<BoxShape>(&shape)) {
+        const Vec3 h = box->halfExtentsM;
+        // Jolt rounds box corners by a convex radius that must not exceed any
+        // half extent; keep its default unless the box is very thin.
+        const float smallest = std::min({h.x, h.y, h.z});
+        const float convexRadius = std::min(JPH::cDefaultConvexRadius, 0.5f * smallest);
+        result = JPH::BoxShapeSettings(toJolt(h), convexRadius).Create();
+    } else if (const auto* sphere = std::get_if<SphereShape>(&shape)) {
+        result = JPH::SphereShapeSettings(sphere->radiusM).Create();
+    } else {
+        const auto& capsule = std::get<CapsuleShape>(shape);
+        // Jolt capsules run along local Y; ours run along local Z (Z up).
+        // Rotating +90 degrees about X turns +Y into +Z.
+        const JPH::Quat yToZ = JPH::Quat::sRotation(JPH::Vec3::sAxisX(), 0.5f * kPi);
+        const JPH::RefConst<JPH::ShapeSettings> inner =
+            new JPH::CapsuleShapeSettings(capsule.halfHeightM, capsule.radiusM);
+        result = JPH::RotatedTranslatedShapeSettings(JPH::Vec3::sZero(), yToZ, inner).Create();
+    }
+    return result.HasError() ? nullptr : result.Get();
+}
+
+// --- Handle tables ------------------------------------------------------------
+// Slots are reused after destruction; the generation counter goes up each time
+// a slot is freed, so old handles never match a new occupant.
+
+struct BodySlot {
+    JPH::BodyID joltId;
+    std::uint32_t generation = 1;
+    bool alive = false;
+    MotionType motion = MotionType::Static;
+};
+
+struct JointSlot {
+    JPH::Ref<JPH::SwingTwistConstraint> constraint;
+    std::uint32_t generation = 1;
+    bool alive = false;
+    std::uint32_t bodyA = 0; // slot indices, used to find joints attached to a body
+    std::uint32_t bodyB = 0;
+};
+
+struct ListenerEntry {
+    StepListener* listener = nullptr; // not owned, see StepListener
+    StepListenerId id;
+};
+
+// Picks a free slot index (reusing freed ones first), or nullopt when full.
+template <typename Slot>
+std::optional<std::uint32_t> takeSlot(std::vector<Slot>& slots,
+                                      std::vector<std::uint32_t>& freeList, std::uint32_t capacity)
+{
+    if (!freeList.empty()) {
+        const std::uint32_t index = freeList.back();
+        freeList.pop_back();
+        return index;
+    }
+    if (slots.size() >= capacity) {
+        return std::nullopt;
+    }
+    slots.emplace_back();
+    return static_cast<std::uint32_t>(slots.size() - 1);
+}
+
+// --- The world ------------------------------------------------------------------
+
+class JoltWorld final : public PhysicsWorld {
+public:
+    explicit JoltWorld(const WorldConfig& config);
+    ~JoltWorld() override;
+    JoltWorld(const JoltWorld&) = delete;
+    JoltWorld& operator=(const JoltWorld&) = delete;
+    JoltWorld(JoltWorld&&) = delete;
+    JoltWorld& operator=(JoltWorld&&) = delete;
+
+    CreateResult<BodyId> createBody(const BodyDesc& desc) override;
+    bool destroyBody(BodyId body) override;
+    CreateResult<JointId> createJoint(const JointDesc& desc) override;
+    bool destroyJoint(JointId joint) override;
+
+    bool setJointMotor(JointId joint, const JointMotor& motor) override;
+    bool setJointTarget(JointId joint, Quat targetRotation) override;
+
+    bool applyImpulse(BodyId body, Vec3 impulseNs, Vec3 worldPointM) override;
+    bool setVelocity(BodyId body, Vec3 linearMps, Vec3 angularRadps) override;
+    bool setKinematicTarget(BodyId body, Vec3 positionM, Quat rotation) override;
+
+    bool readBody(BodyId body, BodyState& out) const override;
+    std::size_t readBodies(std::span<const BodyId> bodies, std::span<BodyState> out) const override;
+
+    std::optional<RayHit> castRay(Vec3 originM, Vec3 directionTimesLengthM,
+                                  BodyId ignore) const override;
+
+    void step() override;
+    [[nodiscard]] float fixedStepSeconds() const override { return config_.fixedStepSeconds; }
+    StepListenerId addStepListener(StepListener& listener) override;
+    bool removeStepListener(StepListenerId id) override;
+
+private:
+    [[nodiscard]] const BodySlot* findBody(BodyId body) const;
+    [[nodiscard]] JointSlot* findJoint(JointId joint);
+    void destroyJointSlot(std::uint32_t index);
+    // Wakes both bodies of a joint so a changed motor takes effect.
+    void wakeJointBodies(const JointSlot& slot);
+    JPH::BodyInterface& bodies() { return system_.GetBodyInterface(); }
+    [[nodiscard]] const JPH::BodyInterface& bodies() const { return system_.GetBodyInterface(); }
+
+    // Declaration order matters: members are destroyed in reverse order, and
+    // the runtime must outlive everything Jolt, the layer objects must
+    // outlive the physics system that references them.
+    detail::JoltRuntimeRef runtime_;
+    WorldConfig config_;
+    BroadPhaseLayerMap broadPhaseLayers_;
+    ObjectVsBroadPhaseFilter objectVsBroadPhase_;
+    ObjectPairFilter objectPairs_;
+    JPH::TempAllocatorImpl tempAllocator_{kTempAllocatorBytes};
+    JPH::JobSystemSingleThreaded jobSystem_{JPH::cMaxPhysicsJobs};
+    JPH::PhysicsSystem system_;
+
+    std::vector<BodySlot> bodySlots_;
+    std::vector<std::uint32_t> freeBodySlots_;
+    std::vector<JointSlot> jointSlots_;
+    std::vector<std::uint32_t> freeJointSlots_;
+    std::vector<ListenerEntry> listeners_;
+    std::uint32_t nextListenerSerial_ = 0;
+    bool inStep_ = false;
+};
+
+JoltWorld::JoltWorld(const WorldConfig& config) : config_(config)
+{
+    const std::uint32_t maxPairs = std::max(kMinPairs, config.maxBodies * kPairsPerBody);
+    // 0 body mutexes lets Jolt pick a default.
+    system_.Init(config.maxBodies, 0, maxPairs, maxPairs, broadPhaseLayers_, objectVsBroadPhase_,
+                 objectPairs_);
+    system_.SetGravity(toJolt(config.gravityMps2));
+    bodySlots_.reserve(config.maxBodies);
+    jointSlots_.reserve(config.maxJoints);
+    // Reserved up front so freeing a slot never allocates.
+    freeBodySlots_.reserve(config.maxBodies);
+    freeJointSlots_.reserve(config.maxJoints);
+}
+
+JoltWorld::~JoltWorld()
+{
+    // Constraints reference bodies, so remove them first. No slot bookkeeping
+    // here: the tables die with the world.
+    for (const JointSlot& slot : jointSlots_) {
+        if (slot.alive) {
+            system_.RemoveConstraint(slot.constraint);
+        }
+    }
+    for (const BodySlot& slot : bodySlots_) {
+        if (slot.alive) {
+            bodies().RemoveBody(slot.joltId);
+            bodies().DestroyBody(slot.joltId);
+        }
+    }
+}
+
+const BodySlot* JoltWorld::findBody(BodyId body) const
+{
+    if (!body.isValid() || body.index >= bodySlots_.size()) {
+        return nullptr;
+    }
+    const BodySlot& slot = bodySlots_[body.index];
+    return (slot.alive && slot.generation == body.generation) ? &slot : nullptr;
+}
+
+JointSlot* JoltWorld::findJoint(JointId joint)
+{
+    if (!joint.isValid() || joint.index >= jointSlots_.size()) {
+        return nullptr;
+    }
+    JointSlot& slot = jointSlots_[joint.index];
+    return (slot.alive && slot.generation == joint.generation) ? &slot : nullptr;
+}
+
+CreateResult<BodyId> JoltWorld::createBody(const BodyDesc& desc)
+{
+    if (inStep_) {
+        return failure<BodyId>(ErrorCode::CalledDuringStep,
+                               "createBody cannot be called from a step listener");
+    }
+    if (std::string error = validateBody(desc); !error.empty()) {
+        return failure<BodyId>(ErrorCode::InvalidDescription, std::move(error));
+    }
+    const JPH::ShapeRefC shape = createJoltShape(desc.shape);
+    if (shape == nullptr) {
+        return failure<BodyId>(ErrorCode::InvalidDescription, "shape could not be created");
+    }
+    const std::optional<std::uint32_t> index =
+        takeSlot(bodySlots_, freeBodySlots_, config_.maxBodies);
+    if (!index) {
+        return failure<BodyId>(ErrorCode::CapacityExceeded, "maxBodies reached");
+    }
+
+    JPH::EMotionType motion = JPH::EMotionType::Static;
+    JPH::ObjectLayer layer = Layers::kNonMoving;
+    if (desc.motion == MotionType::Dynamic) {
+        motion = JPH::EMotionType::Dynamic;
+        layer = Layers::kMoving;
+    } else if (desc.motion == MotionType::Kinematic) {
+        motion = JPH::EMotionType::Kinematic;
+        layer = Layers::kMoving;
+    }
+
+    JPH::BodyCreationSettings settings(shape, toJolt(desc.positionM),
+                                       toJolt(desc.rotation).Normalized(), motion, layer);
+    settings.mFriction = desc.friction;
+    settings.mRestitution = desc.restitution;
+    settings.mLinearDamping = desc.linearDamping;
+    settings.mAngularDamping = desc.angularDamping;
+    settings.mUserData = *index; // lets ray hits find our handle
+    if (desc.motion == MotionType::Dynamic) {
+        // Use the authored mass; Jolt derives inertia from the shape.
+        settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
+        settings.mMassPropertiesOverride.mMass = desc.massKg;
+    }
+
+    const JPH::EActivation activation = desc.motion == MotionType::Static
+                                            ? JPH::EActivation::DontActivate
+                                            : JPH::EActivation::Activate;
+    const JPH::BodyID joltId = bodies().CreateAndAddBody(settings, activation);
+    if (joltId.IsInvalid()) {
+        freeBodySlots_.push_back(*index);
+        return failure<BodyId>(ErrorCode::CapacityExceeded, "Jolt body limit reached");
+    }
+
+    BodySlot& slot = bodySlots_[*index];
+    slot.joltId = joltId;
+    slot.alive = true;
+    slot.motion = desc.motion;
+    return CreateResult<BodyId>{BodyId{*index, slot.generation}, ErrorCode::None, {}};
+}
+
+bool JoltWorld::destroyBody(BodyId body)
+{
+    if (inStep_ || findBody(body) == nullptr) {
+        return false;
+    }
+    for (std::uint32_t i = 0; i < jointSlots_.size(); ++i) {
+        const JointSlot& joint = jointSlots_[i];
+        if (joint.alive && (joint.bodyA == body.index || joint.bodyB == body.index)) {
+            destroyJointSlot(i);
+        }
+    }
+    BodySlot& slot = bodySlots_[body.index];
+    bodies().RemoveBody(slot.joltId);
+    bodies().DestroyBody(slot.joltId);
+    slot.alive = false;
+    ++slot.generation;
+    freeBodySlots_.push_back(body.index);
+    return true;
+}
+
+CreateResult<JointId> JoltWorld::createJoint(const JointDesc& desc)
+{
+    if (inStep_) {
+        return failure<JointId>(ErrorCode::CalledDuringStep,
+                                "createJoint cannot be called from a step listener");
+    }
+    const BodySlot* bodyA = findBody(desc.bodyA);
+    if (bodyA == nullptr) {
+        return failure<JointId>(ErrorCode::InvalidHandle, "bodyA is not a live body");
+    }
+    const BodySlot* bodyB = findBody(desc.bodyB);
+    if (bodyB == nullptr) {
+        return failure<JointId>(ErrorCode::InvalidHandle, "bodyB is not a live body");
+    }
+    if (desc.bodyA == desc.bodyB) {
+        return failure<JointId>(ErrorCode::InvalidDescription,
+                                "bodyB must be a different body from bodyA");
+    }
+    if (std::string error = validateJointGeometry(desc); !error.empty()) {
+        return failure<JointId>(ErrorCode::InvalidDescription, std::move(error));
+    }
+    const std::optional<std::uint32_t> index =
+        takeSlot(jointSlots_, freeJointSlots_, config_.maxJoints);
+    if (!index) {
+        return failure<JointId>(ErrorCode::CapacityExceeded, "maxJoints reached");
+    }
+
+    JPH::SwingTwistConstraintSettings settings;
+    settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+    settings.mPosition1 = settings.mPosition2 = toJolt(desc.anchorM);
+    settings.mTwistAxis1 = settings.mTwistAxis2 = toJolt(desc.twistAxis).Normalized();
+    settings.mPlaneAxis1 = settings.mPlaneAxis2 = toJolt(desc.planeAxis).Normalized();
+    settings.mNormalHalfConeAngle = desc.normalHalfConeRad;
+    settings.mPlaneHalfConeAngle = desc.planeHalfConeRad;
+    settings.mTwistMinAngle = desc.twistMinRad;
+    settings.mTwistMaxAngle = desc.twistMaxRad;
+    settings.mNumPositionStepsOverride = kJointPositionSteps;
+
+    JPH::TwoBodyConstraint* created =
+        bodies().CreateConstraint(&settings, bodyA->joltId, bodyB->joltId);
+    if (created == nullptr) {
+        freeJointSlots_.push_back(*index);
+        return failure<JointId>(ErrorCode::InvalidHandle, "bodyA or bodyB could not be locked");
+    }
+    JointSlot& slot = jointSlots_[*index];
+    // Jolt constraints are reference counted (JPH::Ref); the slot holds one
+    // reference and the physics system another while the joint is added.
+    slot.constraint = static_cast<JPH::SwingTwistConstraint*>(created);
+    slot.alive = true;
+    slot.bodyA = desc.bodyA.index;
+    slot.bodyB = desc.bodyB.index;
+    system_.AddConstraint(slot.constraint);
+    return CreateResult<JointId>{JointId{*index, slot.generation}, ErrorCode::None, {}};
+}
+
+void JoltWorld::destroyJointSlot(std::uint32_t index)
+{
+    JointSlot& slot = jointSlots_[index];
+    system_.RemoveConstraint(slot.constraint);
+    slot.constraint = nullptr;
+    slot.alive = false;
+    ++slot.generation;
+    freeJointSlots_.push_back(index);
+}
+
+bool JoltWorld::destroyJoint(JointId joint)
+{
+    if (inStep_ || findJoint(joint) == nullptr) {
+        return false;
+    }
+    destroyJointSlot(joint.index);
+    return true;
+}
+
+void JoltWorld::wakeJointBodies(const JointSlot& slot)
+{
+    for (const std::uint32_t bodyIndex : {slot.bodyA, slot.bodyB}) {
+        const BodySlot& body = bodySlots_[bodyIndex];
+        if (body.motion != MotionType::Static) {
+            bodies().ActivateBody(body.joltId);
+        }
+    }
+}
+
+bool JoltWorld::setJointMotor(JointId joint, const JointMotor& motor)
+{
+    const JointSlot* slot = findJoint(joint);
+    if (slot == nullptr) {
+        return false;
+    }
+    JPH::SwingTwistConstraint& constraint = *slot->constraint;
+    const bool off = motor.stiffnessNmPerRad == 0.0f && motor.dampingNmsPerRad == 0.0f;
+    if (off) {
+        constraint.SetSwingMotorState(JPH::EMotorState::Off);
+        constraint.SetTwistMotorState(JPH::EMotorState::Off);
+    } else {
+        for (JPH::MotorSettings* settings :
+             {&constraint.GetSwingMotorSettings(), &constraint.GetTwistMotorSettings()}) {
+            settings->mSpringSettings =
+                JPH::SpringSettings(JPH::ESpringMode::StiffnessAndDamping, motor.stiffnessNmPerRad,
+                                    motor.dampingNmsPerRad);
+            settings->SetTorqueLimit(motor.maxTorqueNm);
+        }
+        constraint.SetSwingMotorState(JPH::EMotorState::Position);
+        constraint.SetTwistMotorState(JPH::EMotorState::Position);
+    }
+    wakeJointBodies(*slot);
+    return true;
+}
+
+bool JoltWorld::setJointTarget(JointId joint, Quat targetRotation)
+{
+    const JointSlot* slot = findJoint(joint);
+    if (slot == nullptr || !isUnit(targetRotation)) {
+        return false;
+    }
+    // Jolt's "constraint space" target: body B's joint frame relative to body
+    // A's, with the twist axis as local X and the plane axis as local Y.
+    slot->constraint->SetTargetOrientationCS(toJolt(targetRotation).Normalized());
+    wakeJointBodies(*slot);
+    return true;
+}
+
+bool JoltWorld::applyImpulse(BodyId body, Vec3 impulseNs, Vec3 worldPointM)
+{
+    const BodySlot* slot = findBody(body);
+    if (slot == nullptr || slot->motion != MotionType::Dynamic) {
+        return false;
+    }
+    bodies().AddImpulse(slot->joltId, toJolt(impulseNs), toJolt(worldPointM));
+    return true;
+}
+
+bool JoltWorld::setVelocity(BodyId body, Vec3 linearMps, Vec3 angularRadps)
+{
+    const BodySlot* slot = findBody(body);
+    if (slot == nullptr || slot->motion == MotionType::Static) {
+        return false;
+    }
+    bodies().SetLinearAndAngularVelocity(slot->joltId, toJolt(linearMps), toJolt(angularRadps));
+    return true;
+}
+
+bool JoltWorld::setKinematicTarget(BodyId body, Vec3 positionM, Quat rotation)
+{
+    const BodySlot* slot = findBody(body);
+    if (slot == nullptr || slot->motion != MotionType::Kinematic || !isUnit(rotation)) {
+        return false;
+    }
+    bodies().MoveKinematic(slot->joltId, toJolt(positionM), toJolt(rotation).Normalized(),
+                           config_.fixedStepSeconds);
+    return true;
+}
+
+bool JoltWorld::readBody(BodyId body, BodyState& out) const
+{
+    const BodySlot* slot = findBody(body);
+    if (slot == nullptr) {
+        return false;
+    }
+    const JPH::BodyInterface& bi = bodies();
+    JPH::RVec3 position;
+    JPH::Quat rotation;
+    bi.GetPositionAndRotation(slot->joltId, position, rotation);
+    out.positionM = fromJolt(position);
+    out.rotation = fromJolt(rotation);
+    out.linearVelocityMps = fromJolt(bi.GetLinearVelocity(slot->joltId));
+    out.angularVelocityRadps = fromJolt(bi.GetAngularVelocity(slot->joltId));
+    out.awake = bi.IsActive(slot->joltId);
+    return true;
+}
+
+std::size_t JoltWorld::readBodies(std::span<const BodyId> ids, std::span<BodyState> out) const
+{
+    const std::size_t count = std::min(ids.size(), out.size());
+    std::size_t read = 0;
+    for (std::size_t i = 0; i < count; ++i) {
+        if (readBody(ids[i], out[i])) {
+            ++read;
+        }
+    }
+    return read;
+}
+
+std::optional<RayHit> JoltWorld::castRay(Vec3 originM, Vec3 directionTimesLengthM,
+                                         BodyId ignore) const
+{
+    const JPH::RRayCast ray{toJolt(originM), toJolt(directionTimesLengthM)};
+    JPH::RayCastResult hit;
+    const BodySlot* ignored = findBody(ignore);
+    const JPH::IgnoreSingleBodyFilter ignoreFilter(ignored != nullptr ? ignored->joltId
+                                                                      : JPH::BodyID());
+    const bool found = system_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, ignoreFilter);
+    if (!found) {
+        return std::nullopt;
+    }
+
+    const JPH::RVec3 point = ray.GetPointOnRay(hit.mFraction);
+    const JPH::BodyLockRead lock(system_.GetBodyLockInterface(), hit.mBodyID);
+    if (!lock.Succeeded()) {
+        return std::nullopt;
+    }
+    const JPH::Body& body = lock.GetBody();
+    const auto index = static_cast<std::uint32_t>(body.GetUserData());
+
+    RayHit result;
+    result.body = BodyId{index, bodySlots_[index].generation};
+    result.pointM = fromJolt(point);
+    result.normal = fromJolt(body.GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, point));
+    result.fraction = hit.mFraction;
+    return result;
+}
+
+void JoltWorld::step()
+{
+    const float dt = config_.fixedStepSeconds;
+    inStep_ = true;
+    // Index loops (not range-for) so a listener that adds another listener
+    // does not invalidate the iteration.
+    for (std::size_t i = 0; i < listeners_.size(); ++i) {
+        listeners_[i].listener->onPreStep(*this, dt);
+    }
+    constexpr int kCollisionSteps = 1;
+    system_.Update(dt, kCollisionSteps, &tempAllocator_, &jobSystem_);
+    for (std::size_t i = 0; i < listeners_.size(); ++i) {
+        listeners_[i].listener->onPostStep(*this, dt);
+    }
+    inStep_ = false;
+}
+
+StepListenerId JoltWorld::addStepListener(StepListener& listener)
+{
+    // Serial numbers are never reused, so a removed id never matches again.
+    const StepListenerId id{nextListenerSerial_++, 1};
+    listeners_.push_back(ListenerEntry{&listener, id});
+    return id;
+}
+
+bool JoltWorld::removeStepListener(StepListenerId id)
+{
+    const auto it = std::find_if(listeners_.begin(), listeners_.end(),
+                                 [id](const ListenerEntry& entry) { return entry.id == id; });
+    if (it == listeners_.end()) {
+        return false;
+    }
+    listeners_.erase(it);
+    return true;
+}
+
+} // namespace
+
+std::unique_ptr<PhysicsWorld> createJoltWorld(const WorldConfig& config, std::string* errorOut)
+{
+    if (std::string error = validateConfig(config); !error.empty()) {
+        if (errorOut != nullptr) {
+            *errorOut = std::move(error);
+        }
+        return nullptr;
+    }
+    return std::make_unique<JoltWorld>(config);
+}
+
+} // namespace opas::physics::jolt

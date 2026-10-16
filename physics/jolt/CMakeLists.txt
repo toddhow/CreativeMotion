@@ -2,6 +2,8 @@
 # headers; Jolt is linked PRIVATE so it does not leak to anything that links us.
 add_library(opas_physics_jolt
   src/BackendInfo.cpp
+  src/JoltRuntime.cpp
+  src/JoltWorld.cpp
 )
 add_library(opas::physics_jolt ALIAS opas_physics_jolt)
 

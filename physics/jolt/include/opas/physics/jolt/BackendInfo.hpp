@@ -17,9 +17,9 @@ struct JoltVersion {
 // The Jolt version this library was compiled against.
 JoltVersion linkedJoltVersion();
 
-// Registers Jolt's types, counts them, then unregisters them again.
-// A non-zero result proves Jolt's compiled code (not just its headers) is
-// linked in. Not thread-safe: it touches Jolt's global factory.
+// Counts the types Jolt registers, setting Jolt up temporarily if no world is
+// alive. A non-zero result proves Jolt's compiled code (not just its headers)
+// is linked in.
 std::size_t countRegisteredJoltTypes();
 
 } // namespace opas::physics::jolt

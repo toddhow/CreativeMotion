@@ -74,7 +74,9 @@ public:
     // --- Drive joints --------------------------------------------------------
     virtual bool setJointMotor(JointId joint, const JointMotor& motor) = 0;
     // Target rotation of body B's joint frame relative to body A's joint frame.
-    // Identity means "the relative pose the joint was created in".
+    // Identity means "the relative pose the joint was created in". Expressed
+    // in joint-frame axes: X = twistAxis, Y = planeAxis, Z = X cross Y, so a
+    // pure twist of angle a is a rotation of a about X.
     virtual bool setJointTarget(JointId joint, Quat targetRotation) = 0;
 
     // --- Drive bodies --------------------------------------------------------

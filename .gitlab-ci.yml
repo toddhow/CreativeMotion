@@ -54,6 +54,17 @@ format:
   script:
     - git ls-files '*.cpp' '*.hpp' '*.h' | xargs --no-run-if-empty clang-format --dry-run --Werror
 
+# Architecture rule: only physics/jolt/ may include Jolt headers. Also runs as
+# a ctest test in every build job; this job reports it on its own, fast.
+jolt-includes:
+  image: ubuntu:24.04
+  tags: [saas-linux-small-amd64]
+  stage: check
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends cmake
+  script:
+    - cmake -P tools/CheckJoltIncludes.cmake
+
 lint:
   extends: .linux
   stage: check
