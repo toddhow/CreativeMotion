@@ -9,6 +9,7 @@ add_executable(opas_tests
   unit/physics_jolt/HandlesTest.cpp
   unit/physics_jolt/JointTest.cpp
   unit/physics_jolt/RaycastTest.cpp
+  unit/physics_jolt/ReviewAmendmentsTest.cpp
   unit/physics_jolt/SeveralWorldsTest.cpp
   unit/physics_jolt/StepListenerTest.cpp
   unit/physics_jolt/ValidationTest.cpp

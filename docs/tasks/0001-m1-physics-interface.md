@@ -54,29 +54,29 @@ Names are illustrative; the shape is what is being approved. All in namespace `o
 - Listeners are not owned: the caller must remove a listener before destroying it.
 
 ## Acceptance criteria
-- [ ] Every header in `physics/interface` compiles in a test that does not link or include Jolt (the test target links only `opas::physics_interface`).
-- [ ] **Box drop:** 1 m cube (half extents 0.5, 10 kg) released at rest from centre height 2.0 m above a static floor whose top is z = 0. After 3 s at 60 Hz: centre z ∈ [0.48, 0.50] m (Jolt allows up to 0.02 m penetration, `mPenetrationSlop`), linear speed < 0.03 m/s (Jolt's sleep threshold), tilt < 1°.
-- [ ] **Determinism:** two worlds built with the same calls (a tilted, spinning box falling onto three stacked boxes, 300 steps), stepped interleaved, give bit-identical `BodyState` for every body at every step.
-- [ ] **Impulse:** in zero gravity, impulse J at the centre of a body of mass m gives linear velocity J/m (relative error ≤ 1e-5).
-- [ ] **Kinematic:** after `setKinematicTarget` and one step, the kinematic body is at the target (≤ 1e-5 m, ≤ 1e-4 rad).
-- [ ] **Raycast:** a ray straight down from (0, 0, 5) hits the floor at (0, 0, 0) with normal (0, 0, 1) (≤ 1e-4); a ray that misses returns no hit; `ignore` skips the given body.
-- [ ] **Joint motor:** in zero gravity, a 1 kg dynamic box (half extents 0.1 m) jointed to a static body, twist limits ±90°, motor stiffness 50 N·m/rad, damping 5 N·m·s/rad, unlimited torque, target 45° about the twist axis: after 2 s at 60 Hz the relative twist is 45° ± 1°.
-- [ ] **Joint limits:** same setup with the motor off and twist limits ±30°; give the box 10 rad/s about the twist axis; for every step over 1 s the twist stays within 30° + 2°.
-- [ ] **Handles:** after `destroyBody`, reading, driving or destroying that handle again returns false; joints attached to it are gone; a newly created body never gets an id equal to the destroyed one.
-- [ ] **Validation:** each invalid `BodyDesc`/`JointDesc` field (non-positive mass on a dynamic body, non-positive extents/radius, non-unit or non-perpendicular axes, invalid body handle, twistMin > twistMax) is rejected with a message naming the field.
-- [ ] **Step listeners:** pre and post are each called once per step, in registration order, with dt = fixedStepSeconds; structural changes during a callback fail with `CalledDuringStep`; a removed listener is not called.
-- [ ] **Several worlds:** two worlds can be created, used and destroyed in any order without affecting each other.
-- [ ] **CI check:** `tools/CheckJoltIncludes.cmake` fails when any file outside `physics/jolt/` includes a Jolt header, passes on the repository, and is run by a CI job.
-- [ ] All presets build and pass on Windows locally; clang-format and clang-tidy clean.
+- [x] Every header in `physics/interface` compiles in a test that does not link or include Jolt (the test target links only `opas::physics_interface`).
+- [x] **Box drop:** 1 m cube (half extents 0.5, 10 kg) released at rest from centre height 2.0 m above a static floor whose top is z = 0. After 3 s at 60 Hz: centre z ∈ [0.48, 0.50] m (Jolt allows up to 0.02 m penetration, `mPenetrationSlop`), linear speed < 0.03 m/s (Jolt's sleep threshold), tilt < 1°.
+- [x] **Determinism:** two worlds built with the same calls (a tilted, spinning box falling onto three stacked boxes, 300 steps), stepped interleaved, give bit-identical `BodyState` for every body at every step.
+- [x] **Impulse:** in zero gravity, impulse J at the centre of a body of mass m gives linear velocity J/m (relative error ≤ 1e-5).
+- [x] **Kinematic:** after `setKinematicTarget` and one step, the kinematic body is at the target (≤ 1e-5 m, ≤ 1e-4 rad).
+- [x] **Raycast:** a ray straight down from (0, 0, 5) hits the floor at (0, 0, 0) with normal (0, 0, 1) (≤ 1e-4); a ray that misses returns no hit; `ignore` skips the given body.
+- [x] **Joint motor:** in zero gravity, a 1 kg dynamic box (half extents 0.1 m) jointed to a static body, twist limits ±90°, motor stiffness 50 N·m/rad, damping 5 N·m·s/rad, unlimited torque, target 45° about the twist axis: after 2 s at 60 Hz the relative twist is 45° ± 1°.
+- [x] **Joint limits:** same setup with the motor off and twist limits ±30°; give the box 10 rad/s about the twist axis; for every step over 1 s the twist stays within 30° + 2°.
+- [x] **Handles:** after `destroyBody`, reading, driving or destroying that handle again returns false; joints attached to it are gone; a newly created body never gets an id equal to the destroyed one.
+- [x] **Validation:** each invalid `BodyDesc`/`JointDesc` field (non-positive mass on a dynamic body, non-positive extents/radius, non-unit or non-perpendicular axes, invalid body handle, twistMin > twistMax) is rejected with a message naming the field.
+- [x] **Step listeners:** pre and post are each called once per step, in registration order, with dt = fixedStepSeconds; structural changes during a callback fail with `CalledDuringStep`; a removed listener is not called.
+- [x] **Several worlds:** two worlds can be created, used and destroyed in any order without affecting each other.
+- [x] **CI check:** `tools/CheckJoltIncludes.cmake` fails when any file outside `physics/jolt/` includes a Jolt header, passes on the repository, and is run by a CI job (`jolt-includes`; the job has not run yet: no GitLab project).
+- [x] All presets build and pass on Windows locally; clang-format and clang-tidy clean.
 
 ## Amendments after the fresh review (2026-10-16)
 
 The reviewer found behaviors the draft left unstated; the interface comments now define them. Added criteria (tests to be added by the test writer):
-- [ ] **Kinematic hold:** after `setKinematicTarget` and one step, further steps without a new target leave the body at the target (≤ 1e-5 m) with zero velocity.
-- [ ] **Damping-only motor:** stiffness 0, damping 5 N·m·s/rad; a jointed box spun at 2 rad/s about the twist axis (zero gravity) slows to < 0.5 rad/s within 1 s. (Motor off: it keeps spinning.)
-- [ ] **Motor validation:** `setJointMotor` returns false for negative or NaN stiffness, damping or maxTorqueNm.
-- [ ] **Listener changes during a step:** a listener that removes itself in `onPreStep` does not stop the next listener being called that step, and is not called again; a listener added during a step is first called (pre and post) on the next step.
-- [ ] **Capsule axis:** a capsule (halfHeight 0.5, radius 0.25) created with identity rotation is long along Z: a ray down from (0, 0, 5) hits its top at z = 0.75 above its centre (≤ 1e-3).
-- [ ] **Drive wakes sleeping bodies:** a box that has gone to sleep on the floor starts moving after `applyImpulse`.
+- [x] **Kinematic hold:** after `setKinematicTarget` and one step, further steps without a new target leave the body at the target (≤ 1e-5 m) with zero velocity (≤ 1e-6, a test choice).
+- [x] **Damping-only motor:** stiffness 0, damping 5 N·m·s/rad; a jointed box spun at 2 rad/s about the twist axis (zero gravity) slows to < 0.5 rad/s within 1 s. (Motor off: it keeps spinning.)
+- [x] **Motor validation:** `setJointMotor` returns false for negative or non-finite (NaN, infinite) stiffness, damping or maxTorqueNm; unlimited torque is float max.
+- [x] **Listener changes during a step:** a listener that removes itself in `onPreStep` does not stop the next listener being called that step, and is not called again; a listener added during a step is first called (pre and post) on the next step.
+- [x] **Capsule axis:** a capsule (halfHeight 0.5, radius 0.25) created with identity rotation is long along Z: a ray down from (0, 0, 5) hits its top at z = 0.75 above its centre (≤ 1e-3).
+- [x] **Drive wakes sleeping bodies:** a box that has gone to sleep on the floor starts moving after `applyImpulse`.
 
 Out of scope: collision filtering between bodies of one ragdoll (M3), contact reporting (M5), multithreaded stepping, shapes beyond box/sphere/capsule, heap-allocation counter (M3), any `core/` code.

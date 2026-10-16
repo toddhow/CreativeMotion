@@ -257,10 +257,11 @@ std::string validateJointGeometry(const JointDesc& desc)
 
 bool isValidMotor(const JointMotor& motor)
 {
-    // >= also rejects NaN. maxTorqueNm may be +infinity-like (float max).
+    // ">= 0" also rejects NaN. "Unlimited" torque is float max (the
+    // JointMotor default), which is finite; infinity itself is rejected.
     return motor.stiffnessNmPerRad >= 0.0f && std::isfinite(motor.stiffnessNmPerRad) &&
            motor.dampingNmsPerRad >= 0.0f && std::isfinite(motor.dampingNmsPerRad) &&
-           motor.maxTorqueNm >= 0.0f;
+           motor.maxTorqueNm >= 0.0f && std::isfinite(motor.maxTorqueNm);
 }
 
 std::string validateConfig(const WorldConfig& config)
