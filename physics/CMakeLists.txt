@@ -1,2 +1,3 @@
-# physics/interface (headers only) arrives in M1; physics/jolt implements it.
+# physics/interface is headers only; physics/jolt implements it.
+add_subdirectory(interface)
 add_subdirectory(jolt)

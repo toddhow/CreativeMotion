@@ -8,5 +8,8 @@ add_library(opas::physics_jolt ALIAS opas_physics_jolt)
 target_include_directories(opas_physics_jolt PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-target_link_libraries(opas_physics_jolt PRIVATE Jolt)
+target_link_libraries(opas_physics_jolt
+  PUBLIC opas::physics_interface
+  PRIVATE Jolt
+)
 opas_set_project_options(opas_physics_jolt)
