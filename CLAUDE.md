@@ -26,8 +26,8 @@ The first build is the physical layer, standalone: the behavior core, a Jolt bac
 **Not yet**
 
 - OpenMW integration (waits for Jolt to land in OpenMW, merge request !3919)
-- Skyrim, SKSE or Havok work of any kind
-- Animation runtime, style layer, IK, face layer, importers
+- SKSE or Havok code in this repository (Skyrim-specific code lives in the plugin repository; see Alignment plugin track)
+- Animation runtime, style layer, face layer, importers (IK and interaction markers start in the alignment track)
 - Learned (machine learning) controllers
 
 ## Tech stack and toolchain
@@ -64,6 +64,9 @@ core/
   arbiter/                state machine and per-body-part blending
   motor/                  joint targets, stiffness, damping
   reconcile/              capsule and event outputs
+kinematic/
+  ik/                     two-bone and chain IK with joint limits
+  markers/                interaction markers, contact detection, alignment solver
 physics/
   interface/              the physics interface (headers only)
   jolt/                   Jolt backend (the only place Jolt headers appear)
@@ -75,7 +78,7 @@ tests/
   unit/  property/  replay/  roundtrip/
 data/
   rigs/  profiles/        sample humanoid rig and profiles
-  recordings/             golden replay recordings
+  recordings/             golden replay recordings (synthetic only)
 .gitlab-ci.yml            CI pipeline (GitLab)
 tools/                    helper scripts for CI and developers
 ```
@@ -93,6 +96,8 @@ Dependencies point one way, and the physics interface is the boundary that keeps
 - **Fixed step:** the core runs inside the backend's step callbacks at the physics rate and is deterministic for identical inputs.
 - **Core never renders:** debug overlays are produced as data (points, lines, labels, colors) and drawn by the viewer.
 - **Same pattern later:** the kinematic layers, face layer and importers each become modules with the same boundaries; OpenMW becomes one more host.
+
+The `kinematic` modules follow the same rules: they depend only on `core/math` and `core/rig`, never on a physics backend, a game or a framework.
 
 ## Coding standards
 
@@ -208,6 +213,47 @@ Seven milestones take the project from an empty repository to a ragdoll that bal
 
 M6 can move ahead of M5 if seeing progress early matters more.
 
+## Alignment plugin track
+
+After M1, a side track builds actor alignment for paired animations in Skyrim: the engine-independent parts in this repository, the Skyrim parts in a separate plugin repository. M2 resumes after A4, or earlier if toddhow decides.
+
+| Repository | Contains | Builds and tests |
+| --- | --- | --- |
+| Main (this one) | `kinematic/ik` and `kinematic/markers`: IK, interaction markers, contact detection, alignment solver | Windows and Linux CI; sandbox and synthetic tests |
+| Plugin (separate) | SKSE host module, SexLab and OStim adapters, in-game recording tool, packaging, Nexus releases | Windows/MSVC CI; CommonLibSSE-NG; main repository pinned to a tag |
+
+- **Generic solver:** it serves all paired animations (killmoves, hugs, carrying, scenes); framework adapters exist only in the plugin repository.
+- **Change order:** a solver change lands here first and is tagged; the plugin then bumps its pinned version.
+- **Game-derived data:** bone transforms recorded in Skyrim stay out of public repositories; CI uses synthetic poses.
+- **Licenses:** check CommonLibSSE-NG's license and each framework's terms before depending on them.
+
+### A1 Kinematic foundations (main repository)
+
+- [ ] Two-bone IK with joint limits; property tests show reachable targets are reached and unreachable ones clamp cleanly
+- [ ] Interaction marker data model and file format (source bone, target body region, offset, contact direction, time window, priority, tolerance) with round-trip tests
+- [ ] Body measurement model: limb lengths and simple surface capsules from a skeleton
+
+### A2 Alignment solver (main repository)
+
+- [ ] Root alignment for two actors from body measurements, with the correction split between both
+- [ ] Limb IK satisfies markers within joint limits, with penetration avoidance against capsules
+- [ ] Synthetic test scenes pair very different body sizes; markers are met within the spec's tolerance
+
+### A3 First plugin release (plugin repository)
+
+- [ ] SKSE plugin built on CommonLibSSE-NG, with a post-graph pose hook for actors in a scene; hook points cited
+- [ ] One framework adapter: whichever exposes scene start, stop, participants and stage most easily
+- [ ] Root alignment only, behind an in-game toggle, plus a recording command for local testing
+- [ ] toddhow judges the result in game across several body-size pairings
+
+### A4 Contacts and detection
+
+- [ ] Automatic marker detection from paired clips (distance, duration, relative motion) with confidence tiers
+- [ ] Hand and foot contact IK in game, and the second framework adapter
+- [ ] A validation pass flags stages whose markers cannot be met
+
+Later, not scheduled: body surfaces from mesh sampling, finger contact, an in-game marker editor, community presets.
+
 ## Path to OpenMW
 
 After M6, work moves into OpenMW in milestones that mirror the phases in OpenMW Animation System — Implementation Doc. None of them are active yet: each gets a full task spec with acceptance criteria before work starts.
@@ -296,6 +342,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-16 | Added Alignment plugin track (A1 to A4), kinematic modules in the layout and rules, two-repository split |
 | 2026-10-16 | Hosting moved to GitLab: GitLab CI replaces GitHub Actions; "pull request" is now "merge request" |
 | 2026-10-16 | License decided: GPL-3.0-or-later; project name stays open |
 | 2026-10-16 | Added Path to OpenMW: start gate and milestones M7 to M12 |
