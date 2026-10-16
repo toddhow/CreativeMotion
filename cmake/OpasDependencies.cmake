@@ -39,6 +39,24 @@ FetchContent_Declare(
   SYSTEM
 )
 
+# --- nlohmann/json ----------------------------------------------------------
+# v3.12.0, commit 55f93686c01528224f448c19128836e7df245f72 (2025-04-11). MIT.
+# Used privately by kinematic/markers for JSON files. Diagnostic positions
+# (an option in its CMakeLists.txt at that commit) record each value's byte
+# offset, so loaders can report line numbers. The define is an INTERFACE
+# definition of the target, so every user sees the same layout.
+set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
+set(JSON_Install OFF CACHE BOOL "" FORCE)
+set(JSON_Diagnostic_Positions ON CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+  nlohmann_json
+  URL https://github.com/nlohmann/json/archive/55f93686c01528224f448c19128836e7df245f72.tar.gz
+  URL_HASH SHA256=67f4cdd9ca930c9c1e130af4a437c7fc98fab77a2846fc2d2a14b4943831f8ef
+  SYSTEM
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
 # --- GoogleTest -------------------------------------------------------------
 # v1.17.0, commit 52eb8108c5bdec04579160ae17225d66034bd723 (2025-04-30). BSD-3-Clause.
 if(OPAS_BUILD_TESTS)

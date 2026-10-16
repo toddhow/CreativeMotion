@@ -30,7 +30,9 @@ opas_enable_sanitizers_globally()
 
 include(OpasDependencies)
 
+add_subdirectory(core)
 add_subdirectory(physics)
+add_subdirectory(kinematic)
 
 if(OPAS_BUILD_TESTS)
   enable_testing()

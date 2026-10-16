@@ -10,6 +10,7 @@ Pins live in `cmake/OpasDependencies.cmake` (commit + SHA-256 of the source arch
 | Dependency | Version | Commit | License | GPLv3-compatible | Used by | Source |
 | --- | --- | --- | --- | --- | --- | --- |
 | Jolt Physics | v5.6.0 | `e77f175595e64cb44218cc9d9d56fc365ad0e36a` | MIT | Yes | `physics/jolt` only | https://github.com/jrouwe/JoltPhysics |
+| nlohmann/json | v3.12.0 | `55f93686c01528224f448c19128836e7df245f72` | MIT | Yes | `kinematic/markers` only (private) | https://github.com/nlohmann/json |
 | GoogleTest | v1.17.0 | `52eb8108c5bdec04579160ae17225d66034bd723` | BSD-3-Clause | Yes | `tests` only | https://github.com/google/googletest |
 
 ## Build options we set on Jolt
