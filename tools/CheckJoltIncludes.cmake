@@ -9,14 +9,29 @@ if(NOT DEFINED ROOT)
   get_filename_component(ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 endif()
 
-file(GLOB_RECURSE candidates
-  RELATIVE "${ROOT}"
-  "${ROOT}/*.h" "${ROOT}/*.hpp" "${ROOT}/*.c" "${ROOT}/*.cpp" "${ROOT}/*.cc" "${ROOT}/*.inl" "${ROOT}/*.ipp"
-)
+# Every C/C++ source or header extension, compared case-insensitively so that
+# Foo.HPP is caught on case-sensitive file systems too.
+set(source_extension_regex "\\.(h|hh|hpp|hxx|h\\+\\+|c|cc|cpp|cxx|c\\+\\+|cppm|ixx|inl|ipp|tpp)$")
+
+# Glob each top-level entry separately so build trees are never walked.
+file(GLOB top_level RELATIVE "${ROOT}" "${ROOT}/*")
+set(candidates "")
+foreach(entry IN LISTS top_level)
+  if(entry MATCHES "^(build|out|\\.git)$")
+    continue()
+  endif()
+  if(IS_DIRECTORY "${ROOT}/${entry}")
+    file(GLOB_RECURSE files RELATIVE "${ROOT}" "${ROOT}/${entry}/*")
+    list(APPEND candidates ${files})
+  else()
+    list(APPEND candidates "${entry}")
+  endif()
+endforeach()
 
 set(violations "")
 foreach(path IN LISTS candidates)
-  if(path MATCHES "^(build|out|\\.git)/" OR path MATCHES "^physics/jolt/")
+  string(TOLOWER "${path}" lower_path)
+  if(NOT lower_path MATCHES "${source_extension_regex}" OR path MATCHES "^physics/jolt/")
     continue()
   endif()
   file(STRINGS "${ROOT}/${path}" lines REGEX "^[ \t]*#[ \t]*include[ \t]*[<\"]Jolt/")

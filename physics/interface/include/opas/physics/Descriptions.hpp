@@ -65,8 +65,11 @@ struct JointDesc {
     float twistMaxRad = 0.0f;
 };
 
-// Angular spring that pulls a joint towards its target rotation.
-// Stiffness and damping both zero means the motor is off.
+// Angular spring that pulls a joint towards its target rotation:
+// torque = stiffness * angle error - damping * relative angular velocity,
+// clamped to maxTorqueNm. Damping alone (stiffness 0) resists motion without
+// pulling towards the target. Stiffness and damping both zero means the motor
+// is off. setJointMotor rejects negative or non-finite values.
 struct JointMotor {
     float stiffnessNmPerRad = 0.0f;
     float dampingNmsPerRad = 0.0f;

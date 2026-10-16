@@ -1,7 +1,7 @@
 # Task: M1 Physics interface and Jolt backend
 Design doc section: CLAUDE.md → "First milestones" → M1. **The design doc's interface section is not in the repository; toddhow approved drafting the interface here from the guide (2026-10-16). Reconcile with the design doc once it is exported.**
 Goal: A thin, engine-neutral physics interface (headers only) and a Jolt implementation of it, good enough to build, drive, read, query and step a ragdoll's rigid bodies and joints.
-Inputs / outputs: new `physics/interface/` (headers, CMake INTERFACE target `opas::physics_interface`); `physics/jolt/` gains the backend and a factory; `tests/unit/physics_interface/`, `tests/unit/physics_jolt/`; new `tools/check_jolt_includes.py` and a CI job. The M0 `BackendInfo` helpers are kept.
+Inputs / outputs: new `physics/interface/` (headers, CMake INTERFACE target `opas::physics_interface`); `physics/jolt/` gains the backend and a factory; `tests/unit/physics_interface/`, `tests/unit/physics_jolt/`; new `tools/CheckJoltIncludes.cmake` (a CMake script, since it then runs anywhere CMake does) with ctest self-tests and a CI job. The M0 `BackendInfo` helpers are kept.
 Constraints:
 - `physics/interface` includes only standard-library headers; no Jolt (or any third-party) type appears in its signatures.
 - Deterministic: identical calls in identical order give bit-identical results (Jolt guarantees this under the same conditions, see "Deterministic Simulation" in Jolt `Docs/Architecture.md` at the pinned commit).
@@ -66,7 +66,17 @@ Names are illustrative; the shape is what is being approved. All in namespace `o
 - [ ] **Validation:** each invalid `BodyDesc`/`JointDesc` field (non-positive mass on a dynamic body, non-positive extents/radius, non-unit or non-perpendicular axes, invalid body handle, twistMin > twistMax) is rejected with a message naming the field.
 - [ ] **Step listeners:** pre and post are each called once per step, in registration order, with dt = fixedStepSeconds; structural changes during a callback fail with `CalledDuringStep`; a removed listener is not called.
 - [ ] **Several worlds:** two worlds can be created, used and destroyed in any order without affecting each other.
-- [ ] **CI check:** `tools/check_jolt_includes.py` fails when any file outside `physics/jolt/` includes a Jolt header, passes on the repository, and is run by a CI job.
+- [ ] **CI check:** `tools/CheckJoltIncludes.cmake` fails when any file outside `physics/jolt/` includes a Jolt header, passes on the repository, and is run by a CI job.
 - [ ] All presets build and pass on Windows locally; clang-format and clang-tidy clean.
+
+## Amendments after the fresh review (2026-10-16)
+
+The reviewer found behaviors the draft left unstated; the interface comments now define them. Added criteria (tests to be added by the test writer):
+- [ ] **Kinematic hold:** after `setKinematicTarget` and one step, further steps without a new target leave the body at the target (≤ 1e-5 m) with zero velocity.
+- [ ] **Damping-only motor:** stiffness 0, damping 5 N·m·s/rad; a jointed box spun at 2 rad/s about the twist axis (zero gravity) slows to < 0.5 rad/s within 1 s. (Motor off: it keeps spinning.)
+- [ ] **Motor validation:** `setJointMotor` returns false for negative or NaN stiffness, damping or maxTorqueNm.
+- [ ] **Listener changes during a step:** a listener that removes itself in `onPreStep` does not stop the next listener being called that step, and is not called again; a listener added during a step is first called (pre and post) on the next step.
+- [ ] **Capsule axis:** a capsule (halfHeight 0.5, radius 0.25) created with identity rotation is long along Z: a ray down from (0, 0, 5) hits its top at z = 0.75 above its centre (≤ 1e-3).
+- [ ] **Drive wakes sleeping bodies:** a box that has gone to sleep on the floor starts moving after `applyImpulse`.
 
 Out of scope: collision filtering between bodies of one ragdoll (M3), contact reporting (M5), multithreaded stepping, shapes beyond box/sphere/capsule, heap-allocation counter (M3), any `core/` code.

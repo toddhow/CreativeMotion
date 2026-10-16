@@ -82,7 +82,8 @@ public:
     // --- Drive bodies --------------------------------------------------------
     virtual bool applyImpulse(BodyId body, Vec3 impulseNs, Vec3 worldPointM) = 0;
     virtual bool setVelocity(BodyId body, Vec3 linearMps, Vec3 angularRadps) = 0;
-    // Kinematic bodies only: reach this pose at the end of the next step.
+    // Kinematic bodies only: reach this pose at the end of the next step, then
+    // stay there until moved again.
     virtual bool setKinematicTarget(BodyId body, Vec3 positionM, Quat rotation) = 0;
 
     // --- Read ----------------------------------------------------------------
@@ -103,6 +104,9 @@ public:
     virtual void step() = 0;
     [[nodiscard]] virtual float fixedStepSeconds() const = 0;
 
+    // Safe to call from a callback: a listener added during a step is first
+    // called on the next step; one removed during a step is not called again,
+    // and the other listeners of that step are unaffected.
     virtual StepListenerId addStepListener(StepListener& listener) = 0;
     virtual bool removeStepListener(StepListenerId id) = 0;
 };

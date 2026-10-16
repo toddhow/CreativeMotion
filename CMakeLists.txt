@@ -46,11 +46,25 @@ if(OPAS_BUILD_TESTS)
   set(fixture "${CMAKE_CURRENT_BINARY_DIR}/jolt_include_fixture")
   file(WRITE "${fixture}/allowed/physics/jolt/Backend.cpp" "#include <Jolt/Jolt.h>\n")
   file(WRITE "${fixture}/allowed/core/Clean.cpp" "#include <vector>\n")
-  file(WRITE "${fixture}/violation/physics/jolt/Backend.cpp" "#include <Jolt/Jolt.h>\n")
-  file(WRITE "${fixture}/violation/core/Leak.hpp" "  #  include \"Jolt/Physics/Body/Body.h\"\n")
+  file(WRITE "${fixture}/allowed/build/Generated.cpp" "#include <Jolt/Jolt.h>\n")
   add_test(NAME JoltIncludeCheck.AllowsBackend
     COMMAND ${CMAKE_COMMAND} -DROOT=${fixture}/allowed -P ${jolt_check})
-  add_test(NAME JoltIncludeCheck.RejectsIncludeOutsideBackend
-    COMMAND ${CMAKE_COMMAND} -DROOT=${fixture}/violation -P ${jolt_check})
-  set_tests_properties(JoltIncludeCheck.RejectsIncludeOutsideBackend PROPERTIES WILL_FAIL TRUE)
+  # One fixture per way a leak could be written, each must be caught on its own.
+  set(leaks
+    "Spaced|core/Leak.hpp|  #  include \"Jolt/Physics/Body/Body.h\""
+    "NoSpace|core/Leak.cpp|#include<Jolt/Jolt.h>"
+    "Cxx|sandbox/Leak.cxx|#include <Jolt/Jolt.h>"
+    "UpperCaseExtension|core/Leak.HPP|#include <Jolt/Jolt.h>"
+    "ModuleInterface|core/Leak.ixx|#include <Jolt/Jolt.h>")
+  foreach(leak IN LISTS leaks)
+    string(REPLACE "|" ";" parts "${leak}")
+    list(GET parts 0 name)
+    list(GET parts 1 file)
+    list(GET parts 2 line)
+    file(WRITE "${fixture}/leak${name}/physics/jolt/Backend.cpp" "#include <Jolt/Jolt.h>\n")
+    file(WRITE "${fixture}/leak${name}/${file}" "${line}\n")
+    add_test(NAME JoltIncludeCheck.Rejects${name}
+      COMMAND ${CMAKE_COMMAND} -DROOT=${fixture}/leak${name} -P ${jolt_check})
+    set_tests_properties(JoltIncludeCheck.Rejects${name} PROPERTIES WILL_FAIL TRUE)
+  endforeach()
 endif()

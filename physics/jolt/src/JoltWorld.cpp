@@ -255,6 +255,14 @@ std::string validateJointGeometry(const JointDesc& desc)
     return {};
 }
 
+bool isValidMotor(const JointMotor& motor)
+{
+    // >= also rejects NaN. maxTorqueNm may be +infinity-like (float max).
+    return motor.stiffnessNmPerRad >= 0.0f && std::isfinite(motor.stiffnessNmPerRad) &&
+           motor.dampingNmsPerRad >= 0.0f && std::isfinite(motor.dampingNmsPerRad) &&
+           motor.maxTorqueNm >= 0.0f;
+}
+
 std::string validateConfig(const WorldConfig& config)
 {
     if (!(config.fixedStepSeconds > 0.0f) || !std::isfinite(config.fixedStepSeconds)) {
@@ -263,8 +271,8 @@ std::string validateConfig(const WorldConfig& config)
     if (!isFinite(config.gravityMps2)) {
         return "gravityMps2 must be finite";
     }
-    if (config.maxBodies == 0) {
-        return "maxBodies must be > 0";
+    if (config.maxBodies == 0 || config.maxBodies > JPH::BodyID::cMaxBodyIndex + 1) {
+        return "maxBodies must be > 0 and within Jolt's body limit";
     }
     if (config.maxJoints == 0) {
         return "maxJoints must be > 0";
@@ -305,6 +313,7 @@ struct BodySlot {
     std::uint32_t generation = 1;
     bool alive = false;
     MotionType motion = MotionType::Static;
+    bool kinematicTargetPending = false; // set by setKinematicTarget until the next step ends
 };
 
 struct JointSlot {
@@ -375,6 +384,7 @@ private:
     [[nodiscard]] const BodySlot* findBody(BodyId body) const;
     [[nodiscard]] JointSlot* findJoint(JointId joint);
     void destroyJointSlot(std::uint32_t index);
+    void stopKinematicBodiesAtTargets();
     // Wakes both bodies of a joint so a changed motor takes effect.
     void wakeJointBodies(const JointSlot& slot);
     JPH::BodyInterface& bodies() { return system_.GetBodyInterface(); }
@@ -396,6 +406,7 @@ private:
     std::vector<std::uint32_t> freeBodySlots_;
     std::vector<JointSlot> jointSlots_;
     std::vector<std::uint32_t> freeJointSlots_;
+    std::vector<std::uint32_t> kinematicTargets_; // body slot indices moved this step
     std::vector<ListenerEntry> listeners_;
     std::uint32_t nextListenerSerial_ = 0;
     bool inStep_ = false;
@@ -403,6 +414,7 @@ private:
 
 JoltWorld::JoltWorld(const WorldConfig& config) : config_(config)
 {
+    // maxBodies is capped by validateConfig, so this cannot overflow.
     const std::uint32_t maxPairs = std::max(kMinPairs, config.maxBodies * kPairsPerBody);
     // 0 body mutexes lets Jolt pick a default.
     system_.Init(config.maxBodies, 0, maxPairs, maxPairs, broadPhaseLayers_, objectVsBroadPhase_,
@@ -413,6 +425,7 @@ JoltWorld::JoltWorld(const WorldConfig& config) : config_(config)
     // Reserved up front so freeing a slot never allocates.
     freeBodySlots_.reserve(config.maxBodies);
     freeJointSlots_.reserve(config.maxJoints);
+    kinematicTargets_.reserve(config.maxBodies);
 }
 
 JoltWorld::~JoltWorld()
@@ -505,6 +518,7 @@ CreateResult<BodyId> JoltWorld::createBody(const BodyDesc& desc)
     slot.joltId = joltId;
     slot.alive = true;
     slot.motion = desc.motion;
+    slot.kinematicTargetPending = false;
     return CreateResult<BodyId>{BodyId{*index, slot.generation}, ErrorCode::None, {}};
 }
 
@@ -520,6 +534,10 @@ bool JoltWorld::destroyBody(BodyId body)
         }
     }
     BodySlot& slot = bodySlots_[body.index];
+    if (slot.kinematicTargetPending) {
+        std::erase(kinematicTargets_, body.index);
+        slot.kinematicTargetPending = false;
+    }
     bodies().RemoveBody(slot.joltId);
     bodies().DestroyBody(slot.joltId);
     slot.alive = false;
@@ -615,7 +633,7 @@ void JoltWorld::wakeJointBodies(const JointSlot& slot)
 bool JoltWorld::setJointMotor(JointId joint, const JointMotor& motor)
 {
     const JointSlot* slot = findJoint(joint);
-    if (slot == nullptr) {
+    if (slot == nullptr || !isValidMotor(motor)) {
         return false;
     }
     JPH::SwingTwistConstraint& constraint = *slot->constraint;
@@ -631,8 +649,14 @@ bool JoltWorld::setJointMotor(JointId joint, const JointMotor& motor)
                                     motor.dampingNmsPerRad);
             settings->SetTorqueLimit(motor.maxTorqueNm);
         }
-        constraint.SetSwingMotorState(JPH::EMotorState::Position);
-        constraint.SetTwistMotorState(JPH::EMotorState::Position);
+        // PositionAndVelocity with a zero target velocity applies
+        // stiffness * angle error - damping * relative velocity, the same as
+        // Position mode, but unlike Position mode it still damps when
+        // stiffness is 0 (SwingTwistConstraint.cpp, HasStiffness vs
+        // HasStiffnessOrDamping checks).
+        constraint.SetTargetAngularVelocityCS(JPH::Vec3::sZero());
+        constraint.SetSwingMotorState(JPH::EMotorState::PositionAndVelocity);
+        constraint.SetTwistMotorState(JPH::EMotorState::PositionAndVelocity);
     }
     wakeJointBodies(*slot);
     return true;
@@ -673,12 +697,18 @@ bool JoltWorld::setVelocity(BodyId body, Vec3 linearMps, Vec3 angularRadps)
 
 bool JoltWorld::setKinematicTarget(BodyId body, Vec3 positionM, Quat rotation)
 {
-    const BodySlot* slot = findBody(body);
-    if (slot == nullptr || slot->motion != MotionType::Kinematic || !isUnit(rotation)) {
+    const BodySlot* found = findBody(body);
+    if (found == nullptr || found->motion != MotionType::Kinematic || !isUnit(rotation)) {
         return false;
     }
-    bodies().MoveKinematic(slot->joltId, toJolt(positionM), toJolt(rotation).Normalized(),
+    BodySlot& slot = bodySlots_[body.index];
+    bodies().MoveKinematic(slot.joltId, toJolt(positionM), toJolt(rotation).Normalized(),
                            config_.fixedStepSeconds);
+    if (!slot.kinematicTargetPending) {
+        // Capacity reserved up front, and each body is listed at most once.
+        slot.kinematicTargetPending = true;
+        kinematicTargets_.push_back(body.index);
+    }
     return true;
 }
 
@@ -743,19 +773,46 @@ std::optional<RayHit> JoltWorld::castRay(Vec3 originM, Vec3 directionTimesLength
 
 void JoltWorld::step()
 {
+    if (inStep_) {
+        return; // a listener called step(): ignore rather than recurse
+    }
     const float dt = config_.fixedStepSeconds;
     inStep_ = true;
-    // Index loops (not range-for) so a listener that adds another listener
-    // does not invalidate the iteration.
-    for (std::size_t i = 0; i < listeners_.size(); ++i) {
-        listeners_[i].listener->onPreStep(*this, dt);
+    // Only listeners registered before this step are called, in both phases.
+    // A listener added during the step starts next step; one removed during
+    // the step is nulled out (not erased) so indices stay put, and is skipped.
+    const std::size_t listenerCount = listeners_.size();
+    for (std::size_t i = 0; i < listenerCount; ++i) {
+        if (listeners_[i].listener != nullptr) {
+            listeners_[i].listener->onPreStep(*this, dt);
+        }
     }
     constexpr int kCollisionSteps = 1;
     system_.Update(dt, kCollisionSteps, &tempAllocator_, &jobSystem_);
-    for (std::size_t i = 0; i < listeners_.size(); ++i) {
-        listeners_[i].listener->onPostStep(*this, dt);
+    stopKinematicBodiesAtTargets();
+    for (std::size_t i = 0; i < listenerCount; ++i) {
+        if (listeners_[i].listener != nullptr) {
+            listeners_[i].listener->onPostStep(*this, dt);
+        }
     }
+    std::erase_if(listeners_, [](const ListenerEntry& entry) { return entry.listener == nullptr; });
     inStep_ = false;
+}
+
+void JoltWorld::stopKinematicBodiesAtTargets()
+{
+    // MoveKinematic works by giving the body the velocity that reaches the
+    // target in one step; Jolt keeps that velocity afterwards. Zero it so the
+    // body stays at its target until it is moved again.
+    for (const std::uint32_t index : kinematicTargets_) {
+        BodySlot& slot = bodySlots_[index];
+        if (slot.alive && slot.kinematicTargetPending) {
+            bodies().SetLinearAndAngularVelocity(slot.joltId, JPH::Vec3::sZero(),
+                                                 JPH::Vec3::sZero());
+            slot.kinematicTargetPending = false;
+        }
+    }
+    kinematicTargets_.clear();
 }
 
 StepListenerId JoltWorld::addStepListener(StepListener& listener)
@@ -768,12 +825,17 @@ StepListenerId JoltWorld::addStepListener(StepListener& listener)
 
 bool JoltWorld::removeStepListener(StepListenerId id)
 {
-    const auto it = std::find_if(listeners_.begin(), listeners_.end(),
-                                 [id](const ListenerEntry& entry) { return entry.id == id; });
+    const auto it =
+        std::find_if(listeners_.begin(), listeners_.end(),
+                     [id](const ListenerEntry& e) { return e.listener != nullptr && e.id == id; });
     if (it == listeners_.end()) {
         return false;
     }
-    listeners_.erase(it);
+    if (inStep_) {
+        it->listener = nullptr; // erased after the step, see step()
+    } else {
+        listeners_.erase(it);
+    }
     return true;
 }
 
