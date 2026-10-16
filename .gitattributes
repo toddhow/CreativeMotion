@@ -1,0 +1,6 @@
+# Normalize line endings so round-trip (byte-for-byte) tests behave the same
+# on Windows and Linux checkouts.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.png binary
+*.jpg binary

@@ -1,0 +1,28 @@
+# Pinned tool version: clang-format 23.1.3 (CI installs it from PyPI).
+# Different clang-format versions can format the same code differently, so
+# upgrade CI and local installs together.
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+IndentWidth: 4
+ColumnLimit: 100
+AccessModifierOffset: -4
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+  AfterClass: false
+  AfterStruct: false
+  AfterNamespace: false
+  AfterControlStatement: Never
+  BeforeElse: false
+  SplitEmptyFunction: false
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: Yes
+PointerAlignment: Left
+DerivePointerAlignment: false
+FixNamespaceComments: true
+NamespaceIndentation: None
+IncludeBlocks: Preserve
+SortIncludes: CaseSensitive
