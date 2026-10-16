@@ -29,6 +29,7 @@ Defined in `Build/CMakeLists.txt` of the pinned Jolt commit.
 
 | Tool | Version | Where pinned |
 | --- | --- | --- |
-| clang-format | 23.1.3 | `.clang-format`, CI `format` job |
-| clang-tidy | 22.1.8 in CI | CI `lint` job |
+| clang-format | 23.1.3 | `.clang-format`, `.gitlab-ci.yml` `format` job |
+| clang-tidy | 22.1.8 in CI | `.gitlab-ci.yml` `lint` job |
 | CMake | ≥ 3.25 | `CMakeLists.txt` |
+| Ninja (Windows CI) | 1.13.2 | `tools/ci/windows-build.ps1` (SHA-256 checked) |

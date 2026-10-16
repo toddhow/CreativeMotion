@@ -8,7 +8,7 @@ This guide tells Claude Code, and any human contributor, how to build the system
 
 - **Placing it:** export this doc as Markdown and save it at the repository root as `CLAUDE.md`, so Claude Code reads it at the start of every session. Export the two design docs into `docs/`.
 - **Authority:** the design docs decide what the system does; this guide decides how work is done. When they disagree, stop and ask the project owner (toddhow) rather than choosing.
-- **Owner:** toddhow is the architect and final reviewer. He is learning C++ and engine development through this project, so explain non-obvious changes in plain language in each pull request.
+- **Owner:** toddhow is the architect and final reviewer. He is learning C++ and engine development through this project, so explain non-obvious changes in plain language in each merge request.
 - **Updating:** when a decision changes, update the relevant design doc and this guide in the same change, and add a changelog row.
 
 ## Scope of the first build
@@ -44,7 +44,7 @@ Defaults below are chosen to match where the code is headed (OpenMW) and to keep
 | Data files | YAML for authored files, JSON for recordings | Confirm format choice |
 | Debug viewer | raylib + Dear ImGui | Confirm; the headless runner comes first |
 | Platforms | Windows (MSVC), Linux (GCC and Clang) | Both built in CI |
-| CI | GitHub Actions | Every pull request runs all gates |
+| CI | GitLab CI (`.gitlab-ci.yml`), GitLab.com hosted runners | Every merge request runs all gates; Windows runners are in beta |
 | Formatting | clang-format, clang-tidy | Checked in CI |
 
 Units and conventions: meters, kilograms, seconds, radians; right-handed coordinates with Z up (matching OpenMW and Bethesda content); fixed physics step of 1/60 s by default, configurable.
@@ -76,7 +76,8 @@ tests/
 data/
   rigs/  profiles/        sample humanoid rig and profiles
   recordings/             golden replay recordings
-.github/workflows/        CI
+.gitlab-ci.yml            CI pipeline (GitLab)
+tools/                    helper scripts for CI and developers
 ```
 
 ## Architecture rules and module boundaries
@@ -116,11 +117,11 @@ Every change follows the same loop, with tests written independently of the impl
 3. **Implement:** the implementing agent makes the tests pass. It may not edit or delete tests without toddhow's approval; if a test looks wrong, it stops and says why.
 4. **Review:** a fresh reviewing subagent that did not write the code checks the diff against the spec, with extra attention to lifetimes, threading, determinism and allocations in hot paths.
 5. **Verify:** all quality gates pass in CI; behavior changes include a sandbox replay and, once the viewer exists, a short recording for toddhow to judge the look.
-6. **Explain and merge:** the pull request explains the change in plain language for toddhow, who approves the merge.
+6. **Explain and merge:** the merge request explains the change in plain language for toddhow, who approves the merge.
 
 Rules for every session:
 
-- One task per branch; small pull requests.
+- One task per branch; small merge requests.
 - Ask when the spec is ambiguous instead of guessing.
 - Never invent an API, file format detail or engine fact; cite a source or ask.
 - Keep each module's `CLAUDE.md` current with rules and pitfalls learned.
@@ -139,21 +140,21 @@ Out of scope: <what not to change>
 
 ## Testing and quality gates
 
-A pull request merges only when every gate below passes; gates are added as the code they check comes to exist.
+A merge request merges only when every gate below passes; gates are added as the code they check comes to exist.
 
 | Gate | What it checks | Runs |
 | --- | --- | --- |
-| Build | Compiles on Windows (MSVC) and Linux (GCC, Clang) with warnings as errors | Every pull request |
-| Format and lint | clang-format and clang-tidy clean | Every pull request |
-| Unit tests | Each module's functions against hand-computed cases | Every pull request |
-| Property tests | Quaternions stay normalized, IK reaches reachable targets, results independent of step rate, capture point matches the formula | Every pull request |
-| Sanitizers | AddressSanitizer and UndefinedBehaviorSanitizer test run on Linux | Every pull request |
-| Round-trip | Rig, profile and recording files read and written back byte-for-byte identical | Every pull request touching formats |
-| Replay | Recorded sandbox scenarios rerun and compared to golden recordings within tolerance | Every pull request touching core or physics |
-| Determinism | The same scenario run twice gives identical results | Every pull request |
+| Build | Compiles on Windows (MSVC) and Linux (GCC, Clang) with warnings as errors | Every merge request |
+| Format and lint | clang-format and clang-tidy clean | Every merge request |
+| Unit tests | Each module's functions against hand-computed cases | Every merge request |
+| Property tests | Quaternions stay normalized, IK reaches reachable targets, results independent of step rate, capture point matches the formula | Every merge request |
+| Sanitizers | AddressSanitizer and UndefinedBehaviorSanitizer test run on Linux | Every merge request |
+| Round-trip | Rig, profile and recording files read and written back byte-for-byte identical | Every merge request touching formats |
+| Replay | Recorded sandbox scenarios rerun and compared to golden recordings within tolerance | Every merge request touching core or physics |
+| Determinism | The same scenario run twice gives identical results | Every merge request |
 | Performance budget | Cost per active ragdoll per step stays under the budget in `docs/budgets.md` | Nightly, and on request |
 
-Golden recordings change only in a pull request that says why, reviewed by toddhow.
+Golden recordings change only in a merge request that says why, reviewed by toddhow.
 
 ## First milestones with acceptance criteria
 
@@ -164,7 +165,7 @@ Seven milestones take the project from an empty repository to a ragdoll that bal
 - [ ] CMake project with Debug, Release and ASan presets builds on Windows and Linux
 - [ ] GoogleTest wired in with one passing test
 - [ ] Jolt fetched at a pinned version and linked only into `physics/jolt`
-- [ ] CI runs build, format, lint, tests and sanitizers on every pull request
+- [ ] CI runs build, format, lint, tests and sanitizers on every merge request
 - [ ] This guide committed as `CLAUDE.md`; design docs exported into `docs/`
 
 ### M1 Physics interface and Jolt backend
@@ -258,7 +259,7 @@ A task is done only when all of these hold:
 - All quality gates pass in CI
 - A fresh reviewing subagent found no unresolved issues
 - The module's `CLAUDE.md` and any affected doc are updated
-- The pull request explains what changed and why in plain language
+- The merge request explains what changed and why in plain language
 - toddhow approved the merge
 
 ## Guardrails
@@ -282,7 +283,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 - [ ] Debug viewer library: raylib with Dear ImGui, or an alternative
 - [ ] Where test animations come from: procedural poses first, then which permissively licensed clips
 - [ ] Performance budget per active ragdoll for `docs/budgets.md`
-- [ ] Hosting: GitHub repository and CI runner choices
+- [x] Hosting: GitLab (where OpenMW lives), GitLab.com hosted runners; decided 2026-10-16
 
 ## References
 
@@ -295,6 +296,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-16 | Hosting moved to GitLab: GitLab CI replaces GitHub Actions; "pull request" is now "merge request" |
 | 2026-10-16 | License decided: GPL-3.0-or-later; project name stays open |
 | 2026-10-16 | Added Path to OpenMW: start gate and milestones M7 to M12 |
 | 2026-10-16 | Guide created: scope, stack, layout, standards, agent workflow, gates, milestones M0 to M6, guardrails |
