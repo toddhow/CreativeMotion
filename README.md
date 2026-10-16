@@ -18,4 +18,6 @@ Presets: `debug`, `release`, `asan` (AddressSanitizer; plus UBSan on GCC/Clang).
 
 ## License
 
-Not chosen yet — see "Open questions" in `CLAUDE.md`.
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
+
+Third-party dependencies keep their own licenses; see [docs/dependencies.md](docs/dependencies.md).

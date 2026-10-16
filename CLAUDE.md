@@ -267,7 +267,7 @@ These rules protect the project legally and keep it honest; breaking one blocks 
 
 - **No proprietary code or SDKs.** Never add the Havok SDK, decompiled game code, or code copied from mods that are not open-source licensed (Community Behaviors is currently All Rights Reserved; Universal Kinematics publishes no source).
 - **No game assets.** No Bethesda animations, meshes, audio or other files in the repository; tests use generated data or permissively licensed samples with the license recorded.
-- **Licenses checked before adding a dependency.** Each dependency's license is recorded in `docs/dependencies.md`; it must be compatible with the project license and with GPLv3, since the code is headed into OpenMW.
+- **Licenses checked before adding a dependency.** Each dependency's license is recorded in `docs/dependencies.md`; it must be compatible with the project license, GPL-3.0-or-later (OpenMW is also GPLv3).
 - **Cite engine facts.** Any statement about OpenMW, Skyrim or Jolt internals cites a file, commit or documentation page; invented engine facts are treated as bugs.
 - **Datasets.** Motion capture data is used only after its license is checked; several common datasets carry non-commercial terms.
 
@@ -275,7 +275,8 @@ These rules protect the project legally and keep it honest; breaking one blocks 
 
 Claude Code should raise these with toddhow when a task depends on one, rather than deciding alone.
 
-- [ ] Project name and license (permissive MIT or zlib, or MPL); must stay GPLv3-compatible
+- [ ] Project name (code uses the placeholder prefix `opas` until decided)
+- [x] License: GPL-3.0-or-later, decided 2026-10-16 (`docs/decisions/0001-license.md`)
 - [ ] C++ standard: confirm C++20 matches OpenMW's current requirement
 - [ ] Authored data format: YAML or JSON
 - [ ] Debug viewer library: raylib with Dear ImGui, or an alternative
@@ -294,5 +295,6 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-16 | License decided: GPL-3.0-or-later; project name stays open |
 | 2026-10-16 | Added Path to OpenMW: start gate and milestones M7 to M12 |
 | 2026-10-16 | Guide created: scope, stack, layout, standards, agent workflow, gates, milestones M0 to M6, guardrails |

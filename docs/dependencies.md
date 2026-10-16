@@ -1,8 +1,9 @@
 # Dependencies
 
 Every third-party dependency, its pinned version and its license. A dependency
-is added only after its license is checked against the project license (still
-an open question) and GPLv3, since the code is headed into OpenMW.
+is added only after its license is checked for compatibility with the project
+license, GPL-3.0-or-later. Permissive licenses (MIT, BSD, zlib, Apache-2.0) are
+fine; GPLv2-only, non-commercial and proprietary licenses are not.
 
 Pins live in `cmake/OpasDependencies.cmake` (commit + SHA-256 of the source archive).
 
