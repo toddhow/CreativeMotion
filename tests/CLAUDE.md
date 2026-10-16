@@ -1,6 +1,7 @@
 # tests — the single test runner
 
 All tests build into one executable, `opas_tests`, run by `ctest --preset <preset>`.
+The one exception is `opas_interface_tests` (`unit/physics_interface/`), which links only `opas::physics_interface` to prove the interface headers build without Jolt; never link Jolt into it.
 
 ## Rules
 - Folders: `unit/`, `property/`, `replay/`, `roundtrip/`. Inside, mirror the module path (`unit/physics_jolt/` tests `physics/jolt`).
