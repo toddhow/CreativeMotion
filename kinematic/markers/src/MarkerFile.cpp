@@ -242,8 +242,8 @@ public:
             return fail(value, pointer, "must be a marker object");
         }
         if (!onlyKeys(value, pointer,
-                      {"id", "sourceBone", "targetRegion", "offsetM", "contactDirection", "window",
-                       "priority", "toleranceM"})) {
+                      {"id", "sourceActor", "targetActor", "sourceBone", "targetRegion", "offsetM",
+                       "contactDirection", "window", "priority", "toleranceM"})) {
             return false;
         }
         // Unknown keys are checked first (alphabetically), then fields in the
@@ -251,6 +251,25 @@ public:
         const Json* id = member(value, pointer, "id");
         if (id == nullptr || !readString(*id, pointer + "/id", out.id)) {
             return false;
+        }
+        const Json* sourceActor = member(value, pointer, "sourceActor");
+        if (sourceActor == nullptr ||
+            !readInt(*sourceActor, pointer + "/sourceActor", out.sourceActor)) {
+            return false;
+        }
+        if (out.sourceActor < 0) {
+            return fail(*sourceActor, pointer + "/sourceActor", "must be >= 0");
+        }
+        const Json* targetActor = member(value, pointer, "targetActor");
+        if (targetActor == nullptr ||
+            !readInt(*targetActor, pointer + "/targetActor", out.targetActor)) {
+            return false;
+        }
+        if (out.targetActor < 0) {
+            return fail(*targetActor, pointer + "/targetActor", "must be >= 0");
+        }
+        if (out.targetActor == out.sourceActor) {
+            return fail(*targetActor, pointer + "/targetActor", "must differ from sourceActor");
         }
         const Json* sourceBone = member(value, pointer, "sourceBone");
         if (sourceBone == nullptr ||
@@ -314,7 +333,7 @@ public:
         }
         if (!version->is_number_integer() ||
             version->get<std::int64_t>() != MarkerSet::kFormatVersion) {
-            return fail(*version, "/version", "unsupported version (expected 1)");
+            return fail(*version, "/version", "unsupported version (expected 2)");
         }
         const Json* markers = member(root, "", "markers");
         if (markers == nullptr) {
@@ -480,7 +499,8 @@ LoadResult loadMarkerSetFile(const std::filesystem::path& path)
 
 std::string writeMarkerSet(const MarkerSet& set)
 {
-    std::string out = "{\n  \"format\": \"opas.markers\",\n  \"version\": 1,\n  \"markers\": ";
+    std::string out = "{\n  \"format\": \"opas.markers\",\n  \"version\": " +
+                      std::to_string(MarkerSet::kFormatVersion) + ",\n  \"markers\": ";
     if (set.markers.empty()) {
         out += "[]\n}\n";
         return out;
@@ -490,6 +510,8 @@ std::string writeMarkerSet(const MarkerSet& set)
         const InteractionMarker& m = set.markers[i];
         out += "    {\n";
         out += "      \"id\": " + jsonString(m.id) + ",\n";
+        out += "      \"sourceActor\": " + std::to_string(m.sourceActor) + ",\n";
+        out += "      \"targetActor\": " + std::to_string(m.targetActor) + ",\n";
         out += "      \"sourceBone\": " + jsonString(m.sourceBone) + ",\n";
         out += "      \"targetRegion\": " + jsonString(m.targetRegion) + ",\n";
         out += "      \"offsetM\": " + vec3(m.offsetM) + ",\n";

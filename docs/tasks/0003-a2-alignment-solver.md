@@ -33,3 +33,11 @@ Goal: Given two posed actors of different body sizes and a marker set, move thei
 - [ ] All presets pass on Windows; format and lint clean.
 
 Out of scope: root rotation (yaw) alignment, vertical alignment, chains longer than two bones, collisions with the actor's own body, more than two actors, smoothing over time (A3 handles frame-to-frame), and any game or SKSE code.
+
+## Clarifications (from the test writer's questions, 2026-10-16)
+- **Whole mapping validated:** `alignPair` rejects any mapping `measureBody` would reject (e.g. an empty limb), even parts it does not use.
+- **Other actor's pose during the penetration test:** the other actor as it is at that moment. Actor 0's chains are solved first against actor 1's shifted pose; actor 1's chains are then solved against actor 0's pose including its bent limbs.
+- **Losing marker's residual:** measured like every marker, from the source bone's final world position (after all IK) to the target point. A loser on a shared chain is usually not met.
+- **Inactive markers:** validated too (actors, bones, regions, numbers).
+- **Settings:** `maxRootShiftM < 0` or non-finite is invalid; `poleSamples < 1` is invalid.
+- **Chain structure:** `midBone` must be a direct child of `rootBone`, and `endBone` of `midBone`. The solver converts world rotations back to local ones.

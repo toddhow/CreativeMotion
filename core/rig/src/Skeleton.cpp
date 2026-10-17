@@ -67,4 +67,20 @@ std::vector<math::Transform> computeWorldRest(const Skeleton& skeleton)
     return world;
 }
 
+std::vector<math::Transform> computeWorldPose(const Skeleton& skeleton,
+                                              std::span<const math::Transform> localPose,
+                                              const math::Transform& root)
+{
+    std::vector<math::Transform> world;
+    world.reserve(skeleton.bones.size());
+    for (std::size_t i = 0; i < skeleton.bones.size(); ++i) {
+        const int parent = skeleton.bones[i].parent;
+        // Parents come first, so world[parent] is already computed; root bones
+        // hang off the model root transform.
+        world.push_back(parent < 0 ? root * localPose[i]
+                                   : world[static_cast<std::size_t>(parent)] * localPose[i]);
+    }
+    return world;
+}
+
 } // namespace opas::rig
