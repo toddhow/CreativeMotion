@@ -1,0 +1,30 @@
+{
+  "format": "opas.markers",
+  "version": 2,
+  "markers": [
+    {
+      "id": "handOnPost",
+      "sourceActor": 0,
+      "targetActor": 1,
+      "sourceBone": "Hand",
+      "targetRegion": "Post",
+      "offsetM": [0.1, 0, 0],
+      "contactDirection": [0, 0, -1],
+      "window": {"startS": 0, "endS": 0.4},
+      "priority": 1,
+      "toleranceM": 0.02
+    },
+    {
+      "id": "tipOnPost",
+      "sourceActor": 0,
+      "targetActor": 1,
+      "sourceBone": "Tip",
+      "targetRegion": "Post",
+      "offsetM": [0, 0, 1],
+      "contactDirection": [0, 0, -1],
+      "window": {"startS": 0.5, "endS": 0.7},
+      "priority": 1,
+      "toleranceM": 0.02
+    }
+  ]
+}

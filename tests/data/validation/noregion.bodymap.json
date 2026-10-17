@@ -1,0 +1,9 @@
+{
+  "format": "opas.bodymap",
+  "version": 1,
+  "limbs": [
+    {"name": "Arm", "bones": ["Base", "Hand"]}
+  ],
+  "capsules": [],
+  "ikChains": []
+}

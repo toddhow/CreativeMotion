@@ -1,0 +1,18 @@
+{
+  "format": "opas.markers",
+  "version": 2,
+  "markers": [
+    {
+      "id": "handOnPost",
+      "sourceActor": 0,
+      "targetActor": 1,
+      "sourceBone": "Hand",
+      "targetRegion": "Post",
+      "offsetM": [0.1, 0, 0],
+      "contactDirection": [0, 0, -1],
+      "window": {"startS": 0, "endS": 0.4},
+      "priority": 1,
+      "toleranceM": 0.02
+    }
+  ]
+}

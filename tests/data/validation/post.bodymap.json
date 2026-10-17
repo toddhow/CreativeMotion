@@ -1,0 +1,11 @@
+{
+  "format": "opas.bodymap",
+  "version": 1,
+  "limbs": [
+    {"name": "Arm", "bones": ["Base", "Hand"]}
+  ],
+  "capsules": [
+    {"region": "Post", "bone": "Base", "endBone": "Tip", "radiusRatio": 0.1}
+  ],
+  "ikChains": []
+}
