@@ -1,9 +1,11 @@
 {
   "format": "opas.markers",
-  "version": 1,
+  "version": 2,
   "markers": [
     {
       "id": "rightHandOnShoulder",
+      "sourceActor": 0,
+      "targetActor": 1,
       "sourceBone": "RightHand",
       "targetRegion": "LeftUpperArm",
       "offsetM": [0.02, -0.01, 0.12],
@@ -14,6 +16,8 @@
     },
     {
       "id": "leftFootOnFloor",
+      "sourceActor": 1,
+      "targetActor": 0,
       "sourceBone": "LeftFoot",
       "targetRegion": "Floor",
       "offsetM": [0, 0, 0],

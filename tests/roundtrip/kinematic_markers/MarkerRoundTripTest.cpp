@@ -108,6 +108,12 @@ MarkerSet randomMarkerSet(SeededRandom& rng)
     for (int i = 0; i < count; ++i) {
         InteractionMarker m;
         m.id = "marker" + std::to_string(i);
+        m.sourceActor = rng.uniformInt(0, 3);
+        // Any other actor index: draw from the remaining three and skip over the source.
+        m.targetActor = rng.uniformInt(0, 2);
+        if (m.targetActor >= m.sourceActor) {
+            ++m.targetActor;
+        }
         m.sourceBone = "Bone" + std::to_string(rng.uniformInt(0, 40));
         m.targetRegion = "Region" + std::to_string(rng.uniformInt(0, 12));
         m.offsetM =

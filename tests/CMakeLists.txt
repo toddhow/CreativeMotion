@@ -7,6 +7,8 @@ add_executable(opas_tests
   unit/core_math/Vec3Test.cpp
   unit/core_rig/SkeletonTest.cpp
   unit/kinematic_ik/TwoBoneIkTest.cpp
+  unit/kinematic_markers/AlignmentScenesTest.cpp
+  unit/kinematic_markers/AlignmentTest.cpp
   unit/kinematic_markers/BodyMeasurementsTest.cpp
   unit/kinematic_markers/MarkerLoadTest.cpp
   unit/physics_jolt/BackendInfoTest.cpp

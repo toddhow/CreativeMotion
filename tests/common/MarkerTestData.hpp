@@ -13,15 +13,17 @@
 
 namespace opas::test {
 
-// Lines: 1 "{", 2 format, 3 version, 4 "markers": [, 5 marker "{", 6 id, 7 sourceBone,
-// 8 targetRegion, 9 offsetM, 10 contactDirection, 11 window, 12 priority, 13 toleranceM,
-// 14 marker "}", 15 "]", 16 "}".
+// Lines: 1 "{", 2 format, 3 version, 4 "markers": [, 5 marker "{", 6 id, 7 sourceActor,
+// 8 targetActor, 9 sourceBone, 10 targetRegion, 11 offsetM, 12 contactDirection, 13 window,
+// 14 priority, 15 toleranceM, 16 marker "}", 17 "]", 18 "}".
 inline constexpr std::string_view kOneMarkerText = R"json({
   "format": "opas.markers",
-  "version": 1,
+  "version": 2,
   "markers": [
     {
       "id": "rightHandOnShoulder",
+      "sourceActor": 0,
+      "targetActor": 1,
       "sourceBone": "RightHand",
       "targetRegion": "LeftUpperArm",
       "offsetM": [0.02, -0.01, 0.12],
@@ -34,14 +36,17 @@ inline constexpr std::string_view kOneMarkerText = R"json({
 }
 )json";
 
-// Lines 1-13 as above, 14 "},", 15 second marker "{", 16 id, 17 sourceBone, 18 targetRegion,
-// 19 offsetM, 20 contactDirection, 21 window, 22 priority, 23 toleranceM, 24 "}", 25 "]", 26 "}".
+// Lines 1-15 as above, 16 "},", 17 second marker "{", 18 id, 19 sourceActor, 20 targetActor,
+// 21 sourceBone, 22 targetRegion, 23 offsetM, 24 contactDirection, 25 window, 26 priority,
+// 27 toleranceM, 28 "}", 29 "]", 30 "}".
 inline constexpr std::string_view kTwoMarkerText = R"json({
   "format": "opas.markers",
-  "version": 1,
+  "version": 2,
   "markers": [
     {
       "id": "rightHandOnShoulder",
+      "sourceActor": 0,
+      "targetActor": 1,
       "sourceBone": "RightHand",
       "targetRegion": "LeftUpperArm",
       "offsetM": [0.02, -0.01, 0.12],
@@ -52,6 +57,8 @@ inline constexpr std::string_view kTwoMarkerText = R"json({
     },
     {
       "id": "leftFootOnFloor",
+      "sourceActor": 1,
+      "targetActor": 0,
       "sourceBone": "LeftFoot",
       "targetRegion": "Floor",
       "offsetM": [0, 0, 0],
@@ -66,7 +73,7 @@ inline constexpr std::string_view kTwoMarkerText = R"json({
 
 inline constexpr std::string_view kEmptyMarkersText = R"json({
   "format": "opas.markers",
-  "version": 1,
+  "version": 2,
   "markers": []
 }
 )json";
@@ -75,6 +82,8 @@ inline markers::InteractionMarker rightHandOnShoulder()
 {
     markers::InteractionMarker m;
     m.id = "rightHandOnShoulder";
+    m.sourceActor = 0;
+    m.targetActor = 1;
     m.sourceBone = "RightHand";
     m.targetRegion = "LeftUpperArm";
     m.offsetM = math::Vec3{0.02, -0.01, 0.12};
@@ -89,6 +98,8 @@ inline markers::InteractionMarker leftFootOnFloor()
 {
     markers::InteractionMarker m;
     m.id = "leftFootOnFloor";
+    m.sourceActor = 1;
+    m.targetActor = 0;
     m.sourceBone = "LeftFoot";
     m.targetRegion = "Floor";
     m.offsetM = math::Vec3{0.0, 0.0, 0.0};

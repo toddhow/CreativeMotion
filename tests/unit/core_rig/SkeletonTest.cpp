@@ -232,4 +232,70 @@ TEST(RigSkeleton, RejectsNonFiniteTranslation)
     }
 }
 
+// ---- computeWorldPose (A2) ----------------------------------------------------------
+
+TEST(RigSkeleton, ComputeWorldPoseMatchesHandComputedChainWithANonIdentityRoot)
+{
+    const Quat rz = fromAxisAngle(kZ, kPi / 2.0);
+    const Quat rx = fromAxisAngle(kX, kPi / 2.0);
+    const Quat ry = fromAxisAngle(kY, kPi / 2.0);
+
+    // The rest pose is deliberately different from the pose: only the pose may matter.
+    Skeleton s;
+    s.bones.push_back(makeBone("Root", -1, Vec3{9.0, 9.0, 9.0}));
+    s.bones.push_back(makeBone("Mid", 0, Vec3{9.0, 9.0, 9.0}));
+    s.bones.push_back(makeBone("Tip", 1, Vec3{9.0, 9.0, 9.0}));
+    ASSERT_EQ(validateSkeleton(s), "");
+
+    const std::vector<Transform> pose = {
+        Transform{Vec3{1.0, 0.0, 0.0}, rz},
+        Transform{Vec3{0.0, 2.0, 0.0}, rx},
+        Transform{Vec3{0.0, 0.0, 3.0}, rz},
+    };
+    const Transform root{Vec3{10.0, 20.0, 30.0}, ry};
+
+    const std::vector<Transform> world = computeWorldPose(s, pose, root);
+    ASSERT_EQ(world.size(), 3U);
+
+    // In model space (see ComputeWorldRestMatchesHandComputedChain, same numbers) the bones are at
+    // (1,0,0), (-1,0,0), (2,0,0). Ry90 maps (x,y,z) -> (z,y,-x), so in the world:
+    //   (1,0,0) -> (0,0,-1), (-1,0,0) -> (0,0,1), (2,0,0) -> (0,0,-2), each plus (10,20,30).
+    EXPECT_PRED_FORMAT3(Vec3Near, world[0].translation, (Vec3{10.0, 20.0, 29.0}), kTol);
+    EXPECT_PRED_FORMAT3(Vec3Near, world[1].translation, (Vec3{10.0, 20.0, 31.0}), kTol);
+    EXPECT_PRED_FORMAT3(Vec3Near, world[2].translation, (Vec3{10.0, 20.0, 28.0}), kTol);
+
+    // Model-space rotations: bone 0 sends x -> y, y -> -x; bone 1 sends x -> y, y -> z;
+    // bone 2 sends x -> z, y -> -y. Then Ry90 on top: y -> y, z -> x, -x -> z, x -> -z.
+    EXPECT_PRED_FORMAT3(Vec3Near, rotate(world[0].rotation, kX), kY, kTol);
+    EXPECT_PRED_FORMAT3(Vec3Near, rotate(world[0].rotation, kY), kZ, kTol);
+    EXPECT_PRED_FORMAT3(Vec3Near, rotate(world[1].rotation, kX), kY, kTol);
+    EXPECT_PRED_FORMAT3(Vec3Near, rotate(world[1].rotation, kY), kX, kTol);
+    EXPECT_PRED_FORMAT3(Vec3Near, rotate(world[2].rotation, kX), kX, kTol);
+    EXPECT_PRED_FORMAT3(Vec3Near, rotate(world[2].rotation, kY), (Vec3{0.0, -1.0, 0.0}), kTol);
+    EXPECT_PRED_FORMAT3(QuatSameRotation, world[2].rotation, ry * rz * rx * rz, kTol);
+}
+
+TEST(RigSkeleton, ComputeWorldPoseWithRestPoseAndIdentityRootEqualsComputeWorldRest)
+{
+    const Quat rz = fromAxisAngle(kZ, kPi / 2.0);
+    const Quat rx = fromAxisAngle(kX, kPi / 2.0);
+    Skeleton s;
+    s.bones.push_back(makeBone("Root", -1, Vec3{1.0, 0.0, 0.0}, rz));
+    s.bones.push_back(makeBone("Mid", 0, Vec3{0.0, 2.0, 0.0}, rx));
+    s.bones.push_back(makeBone("Tip", 1, Vec3{0.0, 0.0, 3.0}, rz));
+    std::vector<Transform> pose;
+    pose.reserve(s.bones.size());
+    for (const auto& bone : s.bones) {
+        pose.push_back(bone.localRest);
+    }
+    const std::vector<Transform> rest = computeWorldRest(s);
+    const std::vector<Transform> posed = computeWorldPose(s, pose, Transform{});
+    ASSERT_EQ(posed.size(), rest.size());
+    for (std::size_t i = 0; i < rest.size(); ++i) {
+        SCOPED_TRACE(i);
+        EXPECT_PRED_FORMAT3(Vec3Near, posed[i].translation, rest[i].translation, kTol);
+        EXPECT_PRED_FORMAT3(QuatSameRotation, posed[i].rotation, rest[i].rotation, kTol);
+    }
+}
+
 } // namespace
