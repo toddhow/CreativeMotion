@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -33,5 +34,13 @@ std::optional<std::size_t> findBone(const Skeleton& skeleton, std::string_view n
 // World (model-space) rest transform of every bone, same order as bones.
 // The skeleton must be valid.
 std::vector<math::Transform> computeWorldRest(const Skeleton& skeleton);
+
+// World transform of every bone for a posed skeleton: localPose holds one
+// transform per bone (same order, relative to the parent, like localRest) and
+// root places the whole model in the world. The skeleton must be valid and
+// localPose.size() == bones.size().
+std::vector<math::Transform> computeWorldPose(const Skeleton& skeleton,
+                                              std::span<const math::Transform> localPose,
+                                              const math::Transform& root);
 
 } // namespace opas::rig

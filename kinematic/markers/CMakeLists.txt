@@ -7,7 +7,7 @@ add_library(opas_markers
 add_library(opas::markers ALIAS opas_markers)
 target_include_directories(opas_markers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(opas_markers
-  PUBLIC opas::math opas::rig
+  PUBLIC opas::math opas::rig opas::ik
   PRIVATE nlohmann_json::nlohmann_json
 )
 opas_set_project_options(opas_markers)

@@ -19,6 +19,8 @@ struct TimeWindow {
 
 struct InteractionMarker {
     std::string id;           // unique within a MarkerSet, non-empty
+    int sourceActor = 0;      // index of the actor whose sourceBone makes contact (>= 0)
+    int targetActor = 1;      // index of the actor owning targetRegion (>= 0, != sourceActor)
     std::string sourceBone;   // bone on the acting actor that makes contact
     std::string targetRegion; // named body region on the other actor (see BodyMeasurements)
     math::Vec3 offsetM;       // contact point relative to the target region's frame
@@ -31,7 +33,7 @@ struct InteractionMarker {
 };
 
 struct MarkerSet {
-    static constexpr int kFormatVersion = 1;
+    static constexpr int kFormatVersion = 1; // becomes 2 (actor fields) once A2 is approved
     std::vector<InteractionMarker> markers;
     friend bool operator==(const MarkerSet&, const MarkerSet&) = default;
 };

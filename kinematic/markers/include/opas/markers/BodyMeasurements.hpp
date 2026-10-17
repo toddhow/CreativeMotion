@@ -7,6 +7,7 @@
 // Which bones form which limb is data (a BodyMapping), because skeletons name
 // their bones differently.
 
+#include "opas/ik/TwoBoneIk.hpp"
 #include "opas/math/Vec3.hpp"
 #include "opas/rig/Skeleton.hpp"
 
@@ -33,9 +34,24 @@ struct CapsuleRule {
     double radiusRatio = 0.15;
 };
 
+// A two-bone IK chain the alignment solver may bend, e.g. an arm
+// {rootBone "RightUpperArm", midBone "RightForearm", endBone "RightHand"}.
+// endBone is what a marker's sourceBone names.
+struct IkChain {
+    std::string name;
+    std::string rootBone;
+    std::string midBone;
+    std::string endBone;
+    ik::HingeLimits limits;
+    // Where the mid joint (elbow, knee) points, in the actor's root frame.
+    math::Vec3 poleDirection{0.0, -1.0, 0.0};
+    double limbRadiusM = 0.04; // limb thickness for penetration tests, > 0
+};
+
 struct BodyMapping {
     std::vector<LimbDefinition> limbs;
     std::vector<CapsuleRule> capsules;
+    std::vector<IkChain> ikChains;
 };
 
 struct LimbLength {
