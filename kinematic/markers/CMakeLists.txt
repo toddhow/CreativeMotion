@@ -8,6 +8,7 @@ add_library(opas_markers
   src/JsonSupport.cpp
   src/PoseClipFile.cpp
   src/ContactDetection.cpp
+  src/Validation.cpp
 )
 add_library(opas::markers ALIAS opas_markers)
 target_include_directories(opas_markers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
