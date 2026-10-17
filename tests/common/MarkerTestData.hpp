@@ -9,13 +9,14 @@
 #include "opas/markers/InteractionMarker.hpp"
 
 #include <string>
+#include <string_view>
 
 namespace opas::test {
 
 // Lines: 1 "{", 2 format, 3 version, 4 "markers": [, 5 marker "{", 6 id, 7 sourceBone,
 // 8 targetRegion, 9 offsetM, 10 contactDirection, 11 window, 12 priority, 13 toleranceM,
 // 14 marker "}", 15 "]", 16 "}".
-inline const std::string kOneMarkerText = R"json({
+inline constexpr std::string_view kOneMarkerText = R"json({
   "format": "opas.markers",
   "version": 1,
   "markers": [
@@ -35,7 +36,7 @@ inline const std::string kOneMarkerText = R"json({
 
 // Lines 1-13 as above, 14 "},", 15 second marker "{", 16 id, 17 sourceBone, 18 targetRegion,
 // 19 offsetM, 20 contactDirection, 21 window, 22 priority, 23 toleranceM, 24 "}", 25 "]", 26 "}".
-inline const std::string kTwoMarkerText = R"json({
+inline constexpr std::string_view kTwoMarkerText = R"json({
   "format": "opas.markers",
   "version": 1,
   "markers": [
@@ -63,7 +64,7 @@ inline const std::string kTwoMarkerText = R"json({
 }
 )json";
 
-inline const std::string kEmptyMarkersText = R"json({
+inline constexpr std::string_view kEmptyMarkersText = R"json({
   "format": "opas.markers",
   "version": 1,
   "markers": []

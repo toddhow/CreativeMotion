@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 namespace {
 
@@ -23,13 +24,19 @@ using opas::test::SeededRandom;
 
 constexpr const char* kFile = "roundtrip.markers.json";
 
+// Only call after checking ok(); value_or keeps static analysis happy about the optional.
+MarkerSet loadedSet(const LoadResult& result)
+{
+    return result.value.value_or(MarkerSet{});
+}
+
 TEST(MarkersRoundTrip, LoadThenWriteOfACanonicalFileIsByteForByteIdentical)
 {
-    for (const std::string* text : {&kOneMarkerText, &kTwoMarkerText, &kEmptyMarkersText}) {
-        SCOPED_TRACE(*text);
-        const LoadResult loaded = loadMarkerSet(*text, kFile);
+    for (const std::string_view text : {kOneMarkerText, kTwoMarkerText, kEmptyMarkersText}) {
+        SCOPED_TRACE(std::string(text));
+        const LoadResult loaded = loadMarkerSet(text, kFile);
         ASSERT_TRUE(loaded.ok()) << loaded.error.toString();
-        EXPECT_EQ(writeMarkerSet(*loaded.value), *text);
+        EXPECT_EQ(writeMarkerSet(loadedSet(loaded)), text);
     }
 }
 
@@ -41,7 +48,7 @@ TEST(MarkersRoundTrip, WriteThenLoadGivesAnEqualSet)
         SCOPED_TRACE(text);
         const LoadResult loaded = loadMarkerSet(text, kFile);
         ASSERT_TRUE(loaded.ok()) << loaded.error.toString();
-        EXPECT_TRUE(*loaded.value == set);
+        EXPECT_TRUE(loadedSet(loaded) == set);
     }
 }
 
@@ -89,8 +96,8 @@ TEST(MarkersRoundTrip, TextWithQuotesBackslashesAndNonAsciiSurvives)
     const std::string text = writeMarkerSet(set);
     const LoadResult loaded = loadMarkerSet(text, kFile);
     ASSERT_TRUE(loaded.ok()) << loaded.error.toString() << "\n" << text;
-    EXPECT_TRUE(*loaded.value == set);
-    EXPECT_EQ(writeMarkerSet(*loaded.value), text);
+    EXPECT_TRUE(loadedSet(loaded) == set);
+    EXPECT_EQ(writeMarkerSet(loadedSet(loaded)), text);
 }
 
 // Random but valid marker set; every field comes from the seeded generator.
@@ -126,8 +133,8 @@ TEST(MarkersRoundTripProperty, RandomSetsSurviveWriteLoadWrite)
         ASSERT_TRUE(loaded.ok()) << "seed=" << kSeed << " case=" << i << "\n"
                                  << loaded.error.toString() << "\n"
                                  << text;
-        ASSERT_TRUE(*loaded.value == set) << "seed=" << kSeed << " case=" << i << "\n" << text;
-        ASSERT_EQ(writeMarkerSet(*loaded.value), text) << "seed=" << kSeed << " case=" << i;
+        ASSERT_TRUE(loadedSet(loaded) == set) << "seed=" << kSeed << " case=" << i << "\n" << text;
+        ASSERT_EQ(writeMarkerSet(loadedSet(loaded)), text) << "seed=" << kSeed << " case=" << i;
     }
 }
 

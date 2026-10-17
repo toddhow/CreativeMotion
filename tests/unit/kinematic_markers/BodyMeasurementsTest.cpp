@@ -16,7 +16,6 @@ namespace {
 
 using opas::markers::BodyMapping;
 using opas::markers::CapsuleRule;
-using opas::markers::LimbDefinition;
 using opas::markers::measureBody;
 using opas::markers::MeasureResult;
 using opas::math::fromAxisAngle;

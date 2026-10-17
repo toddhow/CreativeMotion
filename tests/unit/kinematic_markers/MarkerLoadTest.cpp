@@ -17,7 +17,6 @@ using opas::markers::loadMarkerSet;
 using opas::markers::loadMarkerSetFile;
 using opas::markers::LoadResult;
 using opas::markers::MarkerSet;
-using opas::test::contains;
 using opas::test::kEmptyMarkersText;
 using opas::test::kOneMarkerText;
 using opas::test::kTwoMarkerText;
@@ -28,8 +27,9 @@ constexpr const char* kFile = "synthetic.markers.json";
 
 // Replaces the single occurrence of `from`. A test that names text which is not
 // there exactly once is itself broken, so that fails loudly.
-std::string replaceOnce(std::string text, std::string_view from, std::string_view to)
+std::string replaceOnce(std::string_view original, std::string_view from, std::string_view to)
 {
+    std::string text(original);
     const std::size_t first = text.find(from);
     if (first == std::string::npos || text.find(from, first + 1) != std::string::npos) {
         ADD_FAILURE() << "test text must contain exactly one: " << from;
@@ -37,6 +37,12 @@ std::string replaceOnce(std::string text, std::string_view from, std::string_vie
     }
     text.replace(first, from.size(), to);
     return text;
+}
+
+// Only call after checking ok(); value_or keeps static analysis happy about the optional.
+MarkerSet valueOf(const LoadResult& result)
+{
+    return result.value.value_or(MarkerSet{});
 }
 
 void expectRejected(const std::string& text, std::size_t line, const std::string& field)
@@ -56,8 +62,9 @@ TEST(MarkersLoad, CanonicalFileLoadsToTheExpectedValues)
 {
     const LoadResult result = loadMarkerSet(kOneMarkerText, kFile);
     ASSERT_TRUE(result.ok()) << result.error.toString();
-    ASSERT_EQ(result.value->markers.size(), 1U);
-    const auto& m = result.value->markers[0];
+    ASSERT_EQ(valueOf(result).markers.size(), 1U);
+    const MarkerSet set = valueOf(result);
+    const auto& m = set.markers[0];
     EXPECT_EQ(m.id, "rightHandOnShoulder");
     EXPECT_EQ(m.sourceBone, "RightHand");
     EXPECT_EQ(m.targetRegion, "LeftUpperArm");
@@ -71,25 +78,25 @@ TEST(MarkersLoad, CanonicalFileLoadsToTheExpectedValues)
     EXPECT_EQ(m.window.endS, 2.0);
     EXPECT_EQ(m.priority, 1);
     EXPECT_EQ(m.toleranceM, 0.02);
-    EXPECT_TRUE(*result.value == oneMarkerSet());
+    EXPECT_TRUE(valueOf(result) == oneMarkerSet());
 }
 
 TEST(MarkersLoad, TwoMarkersKeepTheirOrder)
 {
     const LoadResult result = loadMarkerSet(kTwoMarkerText, kFile);
     ASSERT_TRUE(result.ok()) << result.error.toString();
-    EXPECT_TRUE(*result.value == twoMarkerSet());
-    ASSERT_EQ(result.value->markers.size(), 2U);
-    EXPECT_EQ(result.value->markers[0].id, "rightHandOnShoulder");
-    EXPECT_EQ(result.value->markers[1].id, "leftFootOnFloor");
-    EXPECT_EQ(result.value->markers[1].priority, -3);
+    EXPECT_TRUE(valueOf(result) == twoMarkerSet());
+    ASSERT_EQ(valueOf(result).markers.size(), 2U);
+    EXPECT_EQ(valueOf(result).markers[0].id, "rightHandOnShoulder");
+    EXPECT_EQ(valueOf(result).markers[1].id, "leftFootOnFloor");
+    EXPECT_EQ(valueOf(result).markers[1].priority, -3);
 }
 
 TEST(MarkersLoad, EmptyMarkerArrayIsValid)
 {
     const LoadResult result = loadMarkerSet(kEmptyMarkersText, kFile);
     ASSERT_TRUE(result.ok()) << result.error.toString();
-    EXPECT_TRUE(result.value->markers.empty());
+    EXPECT_TRUE(valueOf(result).markers.empty());
 }
 
 TEST(MarkersLoad, AcceptsValidJsonThatIsNotCanonical)
@@ -103,7 +110,7 @@ TEST(MarkersLoad, AcceptsValidJsonThatIsNotCanonical)
         "\"id\":\"rightHandOnShoulder\"}],\"version\":1,\"format\":\"opas.markers\"}";
     const LoadResult result = loadMarkerSet(loose, kFile);
     ASSERT_TRUE(result.ok()) << result.error.toString();
-    EXPECT_TRUE(*result.value == oneMarkerSet());
+    EXPECT_TRUE(valueOf(result) == oneMarkerSet());
 }
 
 TEST(MarkersLoad, WindowMayStartAtZeroAndMayBeEmpty)
@@ -368,7 +375,7 @@ TEST(MarkersLoadFile, ReadsAValidFileFromDisk)
 {
     const LoadResult result = loadMarkerSetFile(dataFile("two_markers.markers.json"));
     ASSERT_TRUE(result.ok()) << result.error.toString();
-    EXPECT_TRUE(*result.value == twoMarkerSet());
+    EXPECT_TRUE(valueOf(result) == twoMarkerSet());
 }
 
 TEST(MarkersLoadFile, ErrorsNameThePathAsPassedAndTheLine)

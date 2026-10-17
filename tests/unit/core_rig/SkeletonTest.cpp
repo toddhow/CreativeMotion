@@ -133,9 +133,9 @@ TEST(RigSkeleton, FindBoneReturnsIndexOrNothing)
 {
     const Skeleton s = validChain();
     ASSERT_TRUE(findBone(s, "Root").has_value());
-    EXPECT_EQ(*findBone(s, "Root"), 0U);
+    EXPECT_EQ(findBone(s, "Root").value_or(99U), 0U);
     ASSERT_TRUE(findBone(s, "Head").has_value());
-    EXPECT_EQ(*findBone(s, "Head"), 2U);
+    EXPECT_EQ(findBone(s, "Head").value_or(99U), 2U);
     EXPECT_FALSE(findBone(s, "Tail").has_value());
     EXPECT_FALSE(findBone(s, "").has_value());
     EXPECT_FALSE(findBone(s, "root").has_value()); // names are case-sensitive

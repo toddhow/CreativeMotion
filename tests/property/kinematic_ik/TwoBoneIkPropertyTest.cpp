@@ -34,7 +34,7 @@ constexpr std::uint32_t kSeed = 7001U;
 constexpr int kCases = 1200;
 constexpr double kTol = 1e-9;
 
-enum class Kind {
+enum class Kind : std::uint8_t {
     Reachable, // distance inside [minReach, maxReach]
     TooFar,    // beyond the straight-arm reach
     TooNear,   // closer than the fully-bent reach
