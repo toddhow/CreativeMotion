@@ -1,0 +1,9 @@
+{
+  "format": "opas.detection",
+  "version": 1,
+  "distanceThresholdM": 0.03,
+  "minDurationS": 0.25,
+  "maxRelativeSpeedMps": 0.2,
+  "markerToleranceM": 0.02,
+  "includeLowConfidence": false
+}

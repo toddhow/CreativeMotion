@@ -1,0 +1,23 @@
+{
+  "format": "opas.poseclip",
+  "version": 1,
+  "sampleRateHz": 30,
+  "actors": [
+    {
+      "bodyMap": "humanoid",
+      "bones": ["Pelvis", "RightHand"],
+      "frames": [
+        [[0, 0, 1, 0, 0, 0, 1], [0.3, -0.2, 1.1, 0, 0, 0, 1]],
+        [[0, 0, 1, 0, 0, 0, 1], [0.31, -0.2, 1.1, 0, 0, 0, 1]]
+      ]
+    },
+    {
+      "bodyMap": "humanoid",
+      "bones": ["Pelvis"],
+      "frames": [
+        [[0.6, 0, 1, 0, 0, 2, 0]],
+        [[0.6, 0, 1, 0, 0, 1, 0]]
+      ]
+    }
+  ]
+}
