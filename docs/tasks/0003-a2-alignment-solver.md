@@ -30,7 +30,7 @@ Goal: Given two posed actors of different body sizes and a marker set, move thei
 - [x] **Windows:** markers outside the clip time are ignored; a marker at exactly `startS` or `endS` is active.
 - [x] **Determinism:** the same inputs give bit-identical results.
 - [x] **Invalid input** is rejected with a message (`valid == false`): mismatched pose length, an invalid skeleton or mapping, both weights 0, a negative weight, a marker naming a missing bone, region or actor index, a chain naming a missing bone, non-finite input.
-- [x] All presets pass on Windows; format and lint clean. (Linux CI not yet run: no GitLab project.)
+- [x] All presets pass on Windows; format and lint clean. (Linux CI not yet run: not pushed yet.)
 
 Out of scope: root rotation (yaw) alignment, vertical alignment, chains longer than two bones, collisions with the actor's own body, more than two actors, smoothing over time (A3 handles frame-to-frame), and any game or SKSE code.
 

@@ -67,7 +67,7 @@ Names are illustrative; the shape is what is being approved. All in namespace `o
 - [x] **Validation:** each invalid `BodyDesc`/`JointDesc` field (non-positive mass on a dynamic body, non-positive extents/radius, non-unit or non-perpendicular axes, invalid body handle, twistMin > twistMax) is rejected with a message naming the field.
 - [x] **Step listeners:** pre and post are each called once per step, in registration order, with dt = fixedStepSeconds; structural changes during a callback fail with `CalledDuringStep`; a removed listener is not called.
 - [x] **Several worlds:** two worlds can be created, used and destroyed in any order without affecting each other.
-- [x] **CI check:** `tools/CheckJoltIncludes.cmake` fails when any file outside `physics/jolt/` includes a Jolt header, passes on the repository, and is run by a CI job (`jolt-includes`; the job has not run yet: no GitLab project).
+- [x] **CI check:** `tools/CheckJoltIncludes.cmake` fails when any file outside `physics/jolt/` includes a Jolt header, passes on the repository, and is run by a CI job (`jolt-includes`; the job has not run yet: not pushed yet).
 - [x] All presets build and pass on Windows locally; clang-format and clang-tidy clean.
 
 ## Amendments after the fresh review (2026-10-16)

@@ -8,7 +8,7 @@ This guide tells Claude Code, and any human contributor, how to build the system
 
 - **Placing it:** export this doc as Markdown and save it at the repository root as `CLAUDE.md`, so Claude Code reads it at the start of every session. Export the two design docs into `docs/`.
 - **Authority:** the design docs decide what the system does; this guide decides how work is done. When they disagree, stop and ask the project owner (toddhow) rather than choosing.
-- **Owner:** toddhow is the architect and final reviewer. He is learning C++ and engine development through this project, so explain non-obvious changes in plain language in each merge request.
+- **Owner:** toddhow is the architect and final reviewer. He is learning C++ and engine development through this project, so explain non-obvious changes in plain language in each pull request.
 - **Updating:** when a decision changes, update the relevant design doc and this guide in the same change, and add a changelog row.
 
 ## Scope of the first build
@@ -44,7 +44,7 @@ Defaults below are chosen to match where the code is headed (OpenMW) and to keep
 | Data files | JSON for authored files and recordings | nlohmann/json for parsing; our own canonical writer (`docs/decisions/0002`) |
 | Debug viewer | raylib + Dear ImGui | Confirm; the headless runner comes first |
 | Platforms | Windows (MSVC), Linux (GCC and Clang) | Both built in CI |
-| CI | GitLab CI (`.gitlab-ci.yml`), GitLab.com hosted runners | Every merge request runs all gates; Windows runners are in beta |
+| CI | GitHub Actions (`.github/workflows/ci.yml`) | Every pull request runs all gates |
 | Formatting | clang-format, clang-tidy | Checked in CI |
 
 Units and conventions: meters, kilograms, seconds, radians; right-handed coordinates with Z up (matching OpenMW and Bethesda content); fixed physics step of 1/60 s by default, configurable.
@@ -79,7 +79,7 @@ tests/
 data/
   rigs/  profiles/        sample humanoid rig and profiles
   recordings/             golden replay recordings (synthetic only)
-.gitlab-ci.yml            CI pipeline (GitLab)
+.github/workflows/        CI (GitHub Actions)
 tools/                    helper scripts for CI and developers
 ```
 
@@ -122,11 +122,11 @@ Every change follows the same loop, with tests written independently of the impl
 3. **Implement:** the implementing agent makes the tests pass. It may not edit or delete tests without toddhow's approval; if a test looks wrong, it stops and says why.
 4. **Review:** a fresh reviewing subagent that did not write the code checks the diff against the spec, with extra attention to lifetimes, threading, determinism and allocations in hot paths.
 5. **Verify:** all quality gates pass in CI; behavior changes include a sandbox replay and, once the viewer exists, a short recording for toddhow to judge the look.
-6. **Explain and merge:** the merge request explains the change in plain language for toddhow, who approves the merge.
+6. **Explain and merge:** the pull request explains the change in plain language for toddhow, who approves the merge.
 
 Rules for every session:
 
-- One task per branch; small merge requests.
+- One task per branch; small pull requests.
 - Ask when the spec is ambiguous instead of guessing.
 - Never invent an API, file format detail or engine fact; cite a source or ask.
 - Keep each module's `CLAUDE.md` current with rules and pitfalls learned.
@@ -145,21 +145,21 @@ Out of scope: <what not to change>
 
 ## Testing and quality gates
 
-A merge request merges only when every gate below passes; gates are added as the code they check comes to exist.
+A pull request merges only when every gate below passes; gates are added as the code they check comes to exist.
 
 | Gate | What it checks | Runs |
 | --- | --- | --- |
-| Build | Compiles on Windows (MSVC) and Linux (GCC, Clang) with warnings as errors | Every merge request |
-| Format and lint | clang-format and clang-tidy clean | Every merge request |
-| Unit tests | Each module's functions against hand-computed cases | Every merge request |
-| Property tests | Quaternions stay normalized, IK reaches reachable targets, results independent of step rate, capture point matches the formula | Every merge request |
-| Sanitizers | AddressSanitizer and UndefinedBehaviorSanitizer test run on Linux | Every merge request |
-| Round-trip | Rig, profile and recording files read and written back byte-for-byte identical | Every merge request touching formats |
-| Replay | Recorded sandbox scenarios rerun and compared to golden recordings within tolerance | Every merge request touching core or physics |
-| Determinism | The same scenario run twice gives identical results | Every merge request |
+| Build | Compiles on Windows (MSVC) and Linux (GCC, Clang) with warnings as errors | Every pull request |
+| Format and lint | clang-format and clang-tidy clean | Every pull request |
+| Unit tests | Each module's functions against hand-computed cases | Every pull request |
+| Property tests | Quaternions stay normalized, IK reaches reachable targets, results independent of step rate, capture point matches the formula | Every pull request |
+| Sanitizers | AddressSanitizer and UndefinedBehaviorSanitizer test run on Linux | Every pull request |
+| Round-trip | Rig, profile and recording files read and written back byte-for-byte identical | Every pull request touching formats |
+| Replay | Recorded sandbox scenarios rerun and compared to golden recordings within tolerance | Every pull request touching core or physics |
+| Determinism | The same scenario run twice gives identical results | Every pull request |
 | Performance budget | Cost per active ragdoll per step stays under the budget in `docs/budgets.md` | Nightly, and on request |
 
-Golden recordings change only in a merge request that says why, reviewed by toddhow.
+Golden recordings change only in a pull request that says why, reviewed by toddhow.
 
 ## First milestones with acceptance criteria
 
@@ -170,7 +170,7 @@ Seven milestones take the project from an empty repository to a ragdoll that bal
 - [ ] CMake project with Debug, Release and ASan presets builds on Windows and Linux
 - [x] GoogleTest wired in with one passing test
 - [x] Jolt fetched at a pinned version and linked only into `physics/jolt`
-- [ ] CI runs build, format, lint, tests and sanitizers on every merge request
+- [ ] CI runs build, format, lint, tests and sanitizers on every pull request
 - [ ] This guide committed as `CLAUDE.md`; design docs exported into `docs/`
 
 ### M1 Physics interface and Jolt backend
@@ -178,7 +178,7 @@ Seven milestones take the project from an empty repository to a ragdoll that bal
 - [x] Interface covers build, drive, read, query, step and ownership, as in the design doc (drafted from this guide in `docs/tasks/0001`, approved by toddhow; reconcile once the design doc is exported)
 - [x] A box dropped on a floor comes to rest at the expected height within tolerance
 - [x] Two identical runs produce identical results
-- [x] CI check fails if a Jolt header is included outside `physics/jolt` (job written; first GitLab run pending)
+- [x] CI check fails if a Jolt header is included outside `physics/jolt` (job written; first CI run pending)
 
 ### M2 Rig and profile formats
 
@@ -305,7 +305,7 @@ A task is done only when all of these hold:
 - All quality gates pass in CI
 - A fresh reviewing subagent found no unresolved issues
 - The module's `CLAUDE.md` and any affected doc are updated
-- The merge request explains what changed and why in plain language
+- The pull request explains what changed and why in plain language
 - toddhow approved the merge
 
 ## Guardrails
@@ -329,7 +329,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 - [ ] Debug viewer library: raylib with Dear ImGui, or an alternative
 - [ ] Where test animations come from: procedural poses first, then which permissively licensed clips
 - [ ] Performance budget per active ragdoll for `docs/budgets.md`
-- [x] Hosting: GitLab (where OpenMW lives), GitLab.com hosted runners; decided 2026-10-16
+- [x] Hosting: GitHub, with GitHub Actions; decided 2026-10-16, replacing GitLab (`docs/decisions/0003-github-hosting.md`)
 
 ## References
 
@@ -342,6 +342,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-16 | Hosting moved to GitHub (both repositories): GitHub Actions replaces GitLab CI; "merge request" is now "pull request" again |
 | 2026-10-16 | Authored data format decided: JSON |
 | 2026-10-16 | Added Alignment plugin track (A1 to A4), kinematic modules in the layout and rules, two-repository split |
 | 2026-10-16 | Hosting moved to GitLab: GitLab CI replaces GitHub Actions; "pull request" is now "merge request" |

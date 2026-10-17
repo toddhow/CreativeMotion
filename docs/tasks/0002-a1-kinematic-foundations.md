@@ -44,7 +44,7 @@ Constraints:
 - [x] For a synthetic humanoid skeleton (built in the test, no game data), limb lengths equal the hand-computed sums (≤ 1e-12) and capsules run between the named bones' world rest positions with radius = ratio × length.
 - [x] A mapping naming a missing bone, an empty limb, or a non-positive radius ratio is rejected with a message naming it.
 **General**
-- [x] All presets build and pass on Windows locally; clang-format and clang-tidy clean; Jolt include check still passes. (Linux CI not yet run: no GitLab project.)
+- [x] All presets build and pass on Windows locally; clang-format and clang-tidy clean; Jolt include check still passes. (Linux CI not yet run: not pushed yet.)
 
 Out of scope: chain (> 2 bone) IK, the alignment solver (A2), contact detection from clips (A4), skeleton/body-map file formats (M2 / later), any SKSE or game code.
 

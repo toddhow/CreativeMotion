@@ -1,5 +1,5 @@
 # Build and test one CMake preset with MSVC on Windows.
-# Used by the GitLab Windows job; also runs locally from plain PowerShell.
+# Used by the CI Windows job; also runs locally from plain PowerShell.
 #
 # Usage: powershell -File tools/ci/windows-build.ps1 -Preset debug
 
@@ -29,7 +29,7 @@ cmd /c "`"$vcvars`" >nul && set" | ForEach-Object {
 $env:CC = 'cl'
 $env:CXX = 'cl'
 
-# --- Ninja, pinned (GitLab's Windows image does not list it) ---------------
+# --- Ninja, pinned (used when Ninja is not already on PATH) ----------------
 if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
     $ninjaDir = Join-Path $repoRoot 'build\_tools\ninja-1.13.2'
     $ninjaExe = Join-Path $ninjaDir 'ninja.exe'
