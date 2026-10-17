@@ -40,6 +40,7 @@ Inputs: a `PoseClip`, one `BodyMapping` per actor, and `DetectionSettings` (the 
    - `priority` = 2 for High, 1 for Medium, 0 for Low.
    - `toleranceM = markerToleranceM`.
 8. **Output order:** by `window.startS`, then `id`. Each `DetectedContact` also reports its tier and the run statistics.
+9. **Edge cases:** a clip with no frames gives no contacts (valid). Sanitizing in rule 7 works per byte, so each byte of a non-ASCII (UTF-8) name becomes `_`.
 
 ## Acceptance criteria
 - [ ] Pose clip and detection profile formats documented, with loaders, writers, round-trip tests and error tests (file, line, pointer) for every rule in each format table.
