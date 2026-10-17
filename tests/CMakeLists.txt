@@ -10,6 +10,7 @@ add_executable(opas_tests
   unit/kinematic_markers/AlignmentScenesTest.cpp
   unit/kinematic_markers/AlignmentTest.cpp
   unit/kinematic_markers/BodyMapLoadTest.cpp
+  unit/kinematic_markers/ContactReviewTest.cpp
   unit/kinematic_markers/ContactRulesTest.cpp
   unit/kinematic_markers/ContactScenariosTest.cpp
   unit/kinematic_markers/DetectionProfileTest.cpp
@@ -33,6 +34,7 @@ add_executable(opas_tests
   roundtrip/kinematic_markers/BodyMapHumanoidRoundTripTest.cpp
   roundtrip/kinematic_markers/BodyMapRoundTripTest.cpp
   roundtrip/kinematic_markers/MarkerRoundTripTest.cpp
+  roundtrip/kinematic_markers/NegativeZeroRoundTripTest.cpp
   roundtrip/kinematic_markers/PoseClipRoundTripTest.cpp
 )
 
