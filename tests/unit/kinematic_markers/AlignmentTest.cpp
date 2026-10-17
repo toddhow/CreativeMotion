@@ -903,4 +903,120 @@ TEST(AlignmentInvalid, ARejectedCallLeavesALaterValidCallUnaffected)
     expectBitIdentical(before, after);
 }
 
+// ---- Amendments after the fresh review: chain structure, duplicates, huge input -------------
+
+TEST(AlignmentInvalid, ChainWhoseMidBoneIsNotAChildOfTheRootBone)
+{
+    for (int actor = 0; actor < 2; ++actor) {
+        SCOPED_TRACE(actor);
+        // The other arm's forearm; and the hand, a grandchild of the root bone.
+        expectInvalid(alignScene(sceneWithMappingEdit(
+            actor, [](opas::markers::BodyMapping& m) { m.ikChains[0].midBone = "LeftForearm"; })));
+        expectInvalid(alignScene(sceneWithMappingEdit(
+            actor, [](opas::markers::BodyMapping& m) { m.ikChains[0].midBone = "RightHand"; })));
+    }
+}
+
+TEST(AlignmentInvalid, ChainWhoseEndBoneIsNotAChildOfTheMidBone)
+{
+    for (int actor = 0; actor < 2; ++actor) {
+        SCOPED_TRACE(actor);
+        expectInvalid(alignScene(sceneWithMappingEdit(
+            actor, [](opas::markers::BodyMapping& m) { m.ikChains[0].endBone = "LeftHand"; })));
+        expectInvalid(alignScene(sceneWithMappingEdit(actor, [](opas::markers::BodyMapping& m) {
+            m.ikChains[0].endBone = "RightUpperArm";
+        })));
+    }
+}
+
+TEST(AlignmentInvalid, ChainWithInvalidHingeLimits)
+{
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    for (int actor = 0; actor < 2; ++actor) {
+        SCOPED_TRACE(actor);
+        expectInvalid(alignScene(sceneWithMappingEdit(actor, [](opas::markers::BodyMapping& m) {
+            m.ikChains[0].limits = opas::ik::HingeLimits{-0.1, 2.0};
+        })));
+        expectInvalid(alignScene(sceneWithMappingEdit(actor, [](opas::markers::BodyMapping& m) {
+            m.ikChains[0].limits = opas::ik::HingeLimits{0.0, 3.2};
+        })));
+        expectInvalid(alignScene(sceneWithMappingEdit(actor, [](opas::markers::BodyMapping& m) {
+            m.ikChains[0].limits = opas::ik::HingeLimits{2.0, 1.0};
+        })));
+        Scene notANumber = validScene();
+        notANumber.actors[static_cast<std::size_t>(actor)].body.mapping.ikChains[1].limits =
+            opas::ik::HingeLimits{nan, 2.0};
+        expectInvalid(alignScene(notANumber));
+    }
+}
+
+TEST(AlignmentInvalid, ChainWithAZeroOrNonFinitePoleDirection)
+{
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    for (int actor = 0; actor < 2; ++actor) {
+        SCOPED_TRACE(actor);
+        const auto a = static_cast<std::size_t>(actor);
+        for (const Vec3& pole : {Vec3{0.0, 0.0, 0.0}, Vec3{nan, 0.0, -1.0}, Vec3{0.0, inf, 0.0},
+                                 Vec3{0.0, 0.0, -inf}}) {
+            SCOPED_TRACE(opas::test::str(pole));
+            Scene s = validScene();
+            s.actors[a].body.mapping.ikChains[0].poleDirection = pole;
+            expectInvalid(alignScene(s));
+        }
+    }
+}
+
+TEST(AlignmentInvalid, TwoChainsWithTheSameName)
+{
+    for (int actor = 0; actor < 2; ++actor) {
+        SCOPED_TRACE(actor);
+        expectInvalid(alignScene(sceneWithMappingEdit(
+            actor, [](opas::markers::BodyMapping& m) { m.ikChains[1].name = "RightArm"; })));
+    }
+}
+
+TEST(AlignmentInvalid, TwoChainsWithTheSameEndBone)
+{
+    for (int actor = 0; actor < 2; ++actor) {
+        SCOPED_TRACE(actor);
+        expectInvalid(alignScene(sceneWithMappingEdit(actor, [](opas::markers::BodyMapping& m) {
+            opas::markers::IkChain copy = m.ikChains[0];
+            copy.name = "RightArmAgain"; // a different name, but the same hand
+            m.ikChains.push_back(copy);
+        })));
+    }
+}
+
+TEST(AlignmentInvalid, HugeFiniteInputIsRejectedNotTurnedIntoNaN)
+{
+    constexpr double kHuge = 1e308;
+    for (int actor = 0; actor < 2; ++actor) {
+        SCOPED_TRACE(actor);
+        const auto a = static_cast<std::size_t>(actor);
+
+        Scene root = validScene();
+        root.actors[a].root.translation.x = kHuge;
+        expectInvalid(alignScene(root));
+
+        Scene rootNegative = validScene();
+        rootNegative.actors[a].root.translation = Vec3{-kHuge, kHuge, -kHuge};
+        expectInvalid(alignScene(rootNegative));
+
+        Scene pose = validScene();
+        pose.actors[a].pose[2].translation.y = kHuge;
+        expectInvalid(alignScene(pose));
+    }
+
+    Scene offset = validScene();
+    offset.markers.markers[0].offsetM = Vec3{kHuge, kHuge, kHuge};
+    expectInvalid(alignScene(offset));
+
+    AlignmentSettings settings;
+    settings.maxRootShiftM = kHuge;
+    Scene far = validScene();
+    far.actors[1].root.translation.x = kHuge;
+    expectInvalid(alignScene(far, settings));
+}
+
 } // namespace
