@@ -81,3 +81,6 @@ Sources: the native backend `github.com/SLP-Community/SexLabpp` (commit `d578f81
   - how to get a thread's actors, stage and scene id without SexLab's scripts calling us. Options are reading its Papyrus objects from C++, or a small Papyrus bridge script of our own;
   - how SexLab places actors, since `ActorsRelocated` shows it repositions them itself, and so what plays OStim's alignment-offset role there;
   - whether SexLab P+ offers an alignment adjustment we should feed instead of moving actors ourselves (the "consume the framework's API" rule).
+
+## Decision (toddhow, 2026-10-17): A4d deferred
+The second framework adapter (SexLab P+) is skipped for now. The research above stays for when it resumes. A4 is complete without it.

@@ -249,7 +249,7 @@ After M1, a side track builds actor alignment for paired animations in Skyrim: t
 ### A4 Contacts and detection
 
 - [ ] Automatic marker detection from paired clips (distance, duration, relative motion) with confidence tiers
-- [ ] Hand and foot contact IK in game through a post-graph pose hook (hook points cited), and the second framework adapter
+- [ ] Hand and foot contact IK in game through a post-graph pose hook (hook points cited); the second framework adapter (SexLab P+) is deferred (toddhow, 2026-10-17)
 - [ ] A validation pass flags stages whose markers cannot be met
 
 Later, not scheduled: body surfaces from mesh sampling, finger contact, an in-game marker editor, community presets.
@@ -342,6 +342,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-17 | A4: second framework adapter (SexLab P+) deferred; A4 completes without it |
 | 2026-10-16 | A3 design approved: root alignment through OStim's alignment API, poses sampled per node; the per-frame pose hook moves to A4; body maps become a JSON format (A3a) |
 | 2026-10-16 | A3: first framework is OStim NG; target runtime Skyrim SE 1.6.1170 |
 | 2026-10-16 | Hosting moved to GitHub (both repositories): GitHub Actions replaces GitLab CI; "merge request" is now "pull request" again |
