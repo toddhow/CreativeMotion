@@ -398,4 +398,24 @@ TEST(MarkersLoadFile, MissingFileIsAnErrorNotAnException)
     EXPECT_FALSE(result.error.message.empty());
 }
 
+// ---- Amendments after the fresh review: non-ASCII paths ----------------------------
+
+TEST(MarkersLoadFile, MissingFileWithNonAsciiPathReportsTheUtf8PathAndDoesNotThrow)
+{
+    const std::filesystem::path path = std::filesystem::path(OPAS_TEST_DATA_DIR) / "markers" /
+                                       std::filesystem::path(u8"does_not_exist_日本.markers.json");
+    // The expected text is the path as UTF-8 bytes, whatever the platform's native encoding.
+    std::string utf8;
+    for (const char8_t unit : path.u8string()) {
+        utf8.push_back(static_cast<char>(unit));
+    }
+
+    LoadResult result;
+    EXPECT_NO_THROW(result = loadMarkerSetFile(path));
+    EXPECT_FALSE(result.ok());
+    EXPECT_EQ(result.error.file, utf8);
+    EXPECT_EQ(result.error.field, "");
+    EXPECT_FALSE(result.error.message.empty());
+}
+
 } // namespace

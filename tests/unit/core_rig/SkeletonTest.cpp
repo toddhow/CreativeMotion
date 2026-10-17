@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include <cstddef>
+#include <limits>
 #include <string>
 #include <utility>
 #include <vector>
@@ -194,6 +195,41 @@ TEST(RigSkeleton, ComputeWorldRestHandlesABranchAndASecondRoot)
     // A second root is not affected by the first.
     EXPECT_PRED_FORMAT3(Vec3Near, world[3].translation, (Vec3{5.0, 6.0, 7.0}), kTol);
     EXPECT_PRED_FORMAT3(Vec3Near, rotate(world[3].rotation, kX), kX, kTol);
+}
+
+// ---- Amendments after the fresh review: non-finite values ----------------------
+
+TEST(RigSkeleton, RejectsNonFiniteRotation)
+{
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    const Quat bad[] = {Quat{nan, 0.0, 0.0, 1.0}, Quat{0.0, 0.0, 0.0, nan},
+                        Quat{inf, 0.0, 0.0, 1.0}};
+    for (const Quat& q : bad) {
+        SCOPED_TRACE(opas::test::str(q));
+        Skeleton s = validChain();
+        s.bones[1].localRest.rotation = q;
+        const std::string message = validateSkeleton(s);
+        EXPECT_NE(message, "");
+        EXPECT_TRUE(contains(message, "Spine")) << message;
+        EXPECT_TRUE(contains(message, "rotation")) << message;
+    }
+}
+
+TEST(RigSkeleton, RejectsNonFiniteTranslation)
+{
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    const Vec3 bad[] = {Vec3{nan, 0.0, 0.0}, Vec3{0.0, inf, 0.0}, Vec3{0.0, 0.0, -inf}};
+    for (const Vec3& t : bad) {
+        SCOPED_TRACE(opas::test::str(t));
+        Skeleton s = validChain();
+        s.bones[2].localRest.translation = t;
+        const std::string message = validateSkeleton(s);
+        EXPECT_NE(message, "");
+        EXPECT_TRUE(contains(message, "Head")) << message;
+        EXPECT_TRUE(contains(message, "translation")) << message;
+    }
 }
 
 } // namespace

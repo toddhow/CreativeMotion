@@ -258,4 +258,22 @@ TEST(MarkersBodyMeasurements, OneBadEntryRejectsTheWholeMappingEvenAfterGoodOnes
     expectRejectedNaming(m, "NoSuchBone");
 }
 
+// ---- Amendments after the fresh review: duplicates -------------------------------
+
+TEST(MarkersBodyMeasurements, DuplicateLimbNameIsRejected)
+{
+    BodyMapping m;
+    m.limbs = {{"Arm", {"RightUpperArm", "RightForearm"}},
+               {"Arm", {"LeftUpperArm", "LeftForearm"}}};
+    expectRejectedNaming(m, "Arm");
+}
+
+TEST(MarkersBodyMeasurements, DuplicateCapsuleRegionIsRejected)
+{
+    BodyMapping m;
+    m.capsules = {CapsuleRule{"Forearm", "RightForearm", "RightHand", 0.2},
+                  CapsuleRule{"Forearm", "LeftForearm", "LeftHand", 0.2}};
+    expectRejectedNaming(m, "Forearm");
+}
+
 } // namespace

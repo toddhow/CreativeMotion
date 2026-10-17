@@ -5,7 +5,9 @@
 
 #include <gtest/gtest.h>
 
+#include <bit>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 
 namespace {
@@ -302,6 +304,77 @@ TEST(IkTwoBone, LimitsAtTheEdgesOfTheValidRangeAreAccepted)
     EXPECT_TRUE(solveTwoBone(chain, Vec3{1.5, 0.5, 0.0}, Vec3{0.0, 0.0, 1.0}, {0.0, kPi}).valid);
     // min == max pins the bend to one angle and is allowed.
     EXPECT_TRUE(solveTwoBone(chain, Vec3{1.5, 0.5, 0.0}, Vec3{0.0, 0.0, 1.0}, {1.0, 1.0}).valid);
+}
+
+// ---- Amendments after the fresh review: non-finite and overflowing input ------------
+
+// Exact, bit-for-bit comparison, so that a NaN coordinate compares equal to itself.
+bool sameBits(Vec3 a, Vec3 b)
+{
+    const auto bits = [](double d) { return std::bit_cast<std::uint64_t>(d); };
+    return bits(a.x) == bits(b.x) && bits(a.y) == bits(b.y) && bits(a.z) == bits(b.z);
+}
+
+void expectRejectedUnchanged(const TwoBoneChain& chain, Vec3 target, Vec3 pole)
+{
+    const TwoBoneResult r = solveTwoBone(chain, target, pole, {});
+    EXPECT_FALSE(r.valid);
+    EXPECT_TRUE(sameBits(r.mid, chain.mid)) << opas::test::str(r.mid);
+    EXPECT_TRUE(sameBits(r.end, chain.end)) << opas::test::str(r.end);
+}
+
+TEST(IkTwoBone, NonFiniteTargetIsInvalidAndLeavesPositionsUnchanged)
+{
+    const TwoBoneChain chain{Vec3{0.0, 0.0, 0.0}, Vec3{1.0, 0.0, 0.0}, Vec3{1.0, 1.0, 0.0}};
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    const Vec3 pole{0.0, 0.0, 1.0};
+    expectRejectedUnchanged(chain, Vec3{nan, 0.5, 0.0}, pole);
+    expectRejectedUnchanged(chain, Vec3{0.5, nan, 0.0}, pole);
+    expectRejectedUnchanged(chain, Vec3{0.5, 0.5, nan}, pole);
+    expectRejectedUnchanged(chain, Vec3{inf, 0.5, 0.0}, pole);
+    expectRejectedUnchanged(chain, Vec3{0.5, -inf, 0.0}, pole);
+}
+
+TEST(IkTwoBone, NonFinitePoleIsInvalidAndLeavesPositionsUnchanged)
+{
+    const TwoBoneChain chain{Vec3{0.0, 0.0, 0.0}, Vec3{1.0, 0.0, 0.0}, Vec3{1.0, 1.0, 0.0}};
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    const Vec3 target{0.5, 0.5, 0.0};
+    expectRejectedUnchanged(chain, target, Vec3{nan, 0.0, 1.0});
+    expectRejectedUnchanged(chain, target, Vec3{0.0, inf, 1.0});
+    expectRejectedUnchanged(chain, target, Vec3{0.0, 0.0, -inf});
+}
+
+TEST(IkTwoBone, NonFiniteChainPointIsInvalidAndLeavesPositionsUnchanged)
+{
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    const Vec3 target{0.5, 0.5, 0.0};
+    const Vec3 pole{0.0, 0.0, 1.0};
+    const Vec3 root{0.0, 0.0, 0.0};
+    const Vec3 mid{1.0, 0.0, 0.0};
+    const Vec3 end{1.0, 1.0, 0.0};
+    expectRejectedUnchanged(TwoBoneChain{Vec3{nan, 0.0, 0.0}, mid, end}, target, pole);
+    expectRejectedUnchanged(TwoBoneChain{root, Vec3{1.0, nan, 0.0}, end}, target, pole);
+    expectRejectedUnchanged(TwoBoneChain{root, mid, Vec3{1.0, 1.0, nan}}, target, pole);
+    expectRejectedUnchanged(TwoBoneChain{root, Vec3{inf, 0.0, 0.0}, end}, target, pole);
+    expectRejectedUnchanged(TwoBoneChain{root, mid, Vec3{1.0, -inf, 0.0}}, target, pole);
+}
+
+TEST(IkTwoBone, TargetSoFarAwayThatLengthsOverflowIsInvalid)
+{
+    const TwoBoneChain chain{Vec3{0.0, 0.0, 0.0}, Vec3{1.0, 0.0, 0.0}, Vec3{1.0, 1.0, 0.0}};
+    expectRejectedUnchanged(chain, Vec3{1e200, 0.0, 0.0}, Vec3{0.0, 0.0, 1.0});
+    expectRejectedUnchanged(chain, Vec3{1e200, 1e200, 1e200}, Vec3{0.0, 0.0, 1.0});
+}
+
+TEST(IkTwoBone, HugeButFiniteChainThatOverflowsLengthsIsInvalid)
+{
+    // Bone vectors of 1e200 m: their squared lengths overflow double.
+    const TwoBoneChain chain{Vec3{0.0, 0.0, 0.0}, Vec3{1e200, 0.0, 0.0}, Vec3{1e200, 1e200, 0.0}};
+    expectRejectedUnchanged(chain, Vec3{0.5, 0.5, 0.0}, Vec3{0.0, 0.0, 1.0});
 }
 
 } // namespace
