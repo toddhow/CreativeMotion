@@ -33,3 +33,8 @@ Constraints: deterministic; never throws; root alignment only (see rule 3).
 - [ ] All presets pass; format and lint clean.
 
 Out of scope: limb IK in validation (A4c), the plugin.
+
+## Clarifications (2026-10-17, from the test writer's questions)
+- `allPassed()` is false for an invalid report (`valid == false`), and true for a valid report with no markers.
+- The frame index rounds half away from zero (`std::round`). A window starting before the clip uses frame 0, one starting after it the last frame.
+- The tool prints the PASS/FAIL lines and the summary on standard output, and errors (bad arguments, load errors, an invalid report) on standard error. The summary line is `summary: <passed> passed, <failed> failed`. Scales print in shortest form (`1`, `0.8`, `1.25`). A scale of 0 or less is a bad argument (exit 2).
