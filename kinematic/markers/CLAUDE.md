@@ -13,3 +13,5 @@ Depends on `core/math`, `core/rig`, `kinematic/ik` (alignment) and, privately, n
 - `-0` is written as `-0` but reads back as integer 0, so the next write gives `0`. Harmless, but not byte-identical.
 - Alignment (`alignPair`) copies each actor's pose, bends limbs by turning IK world-space deltas back into local rotations, and recomputes world transforms. This is why IK chains must be direct parent-child bones.
 - Penetration is a sum over capsule overlaps. The pole search keeps a candidate only if it is strictly better (by 1e-9 m), so on ties the smallest rotation and then the chain's own pole win.
+- Shared JSON machinery (`src/JsonSupport.hpp/.cpp`: the reader base class, the parse-and-read driver with line numbers and the non-finite fallback, file reading, canonical number and string writing) serves both marker files and body maps. A new format derives a reader from `detail::JsonReader` and calls `detail::parseAndRead`.
+- Body maps (`docs/formats/bodymap.md`) check structure only. Bone names are checked when a map meets a skeleton (`measureBody`, `alignPair`).

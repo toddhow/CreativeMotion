@@ -77,9 +77,9 @@ TEST(BodyMapRoundTrip, WriteUsesLfLineEndingsAndEndsWithOneNewline)
 TEST(BodyMapRoundTrip, LimbsAndCapsulesAreOneLineEachAndChainsOneKeyPerLine)
 {
     const std::string text = writeBodyMap(bodyMapOfText());
-    EXPECT_TRUE(
-        opas::test::contains(text, "    {\"name\": \"RightArm\", \"bones\": [\"RightUpperArm\", "
-                                   "\"RightForearm\", \"RightHand\"]},\n"));
+    EXPECT_TRUE(opas::test::contains(text,
+                                     "    {\"name\": \"RightArm\", \"bones\": [\"RightUpperArm\", "
+                                     "\"RightForearm\", \"RightHand\"]},\n"));
     EXPECT_TRUE(opas::test::contains(text, "    {\"region\": \"UpperBack\", \"bone\": \"Spine\", "
                                            "\"endBone\": \"Neck\", \"radiusRatio\": 0.1667}\n"));
     EXPECT_TRUE(opas::test::contains(text, "      \"poleDirection\": [0, -1, 0],\n"));

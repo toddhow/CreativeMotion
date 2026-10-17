@@ -1,215 +1,28 @@
 #include "opas/markers/MarkerFile.hpp"
 
-#include <nlohmann/json.hpp>
+#include "JsonSupport.hpp"
 
-#include <algorithm>
-#include <array>
-#include <charconv>
 #include <cmath>
 #include <cstdint>
-#include <cstdlib>
-#include <fstream>
-#include <initializer_list>
-#include <limits>
 #include <set>
-#include <sstream>
+#include <string>
 
 namespace opas::markers {
 namespace {
 
-using Json = nlohmann::json;
+using detail::Json;
+using detail::jsonString;
+using detail::number;
+using detail::vec3;
 
 constexpr std::string_view kFormatName = "opas.markers";
 // How far contactDirection may be from unit length (docs/formats/markers.md).
 constexpr double kUnitTolerance = 1e-6;
 
-// nlohmann/json rejects a number too large for a double (e.g. 1e999) with an
-// exception that carries no position (out_of_range 406). To still report the
-// line and field, such literals are replaced by this string and the text is
-// parsed again; the replacement keeps every line intact, and the readers
-// below report it as "must be finite". The leading NUL (written \u0000) means
-// no real marker file contains it.
-constexpr std::string_view kNonFiniteSentinel = "\"\\u0000opas-non-finite-number\"";
-// The decoded sentinel: a NUL byte, then the name (23 bytes in all).
-constexpr std::string_view kNonFiniteValue("\0opas-non-finite-number", 23);
-
-// Returns the text with every number literal that overflows a double replaced
-// by kNonFiniteSentinel. String contents are skipped.
-std::string replaceOverflowingNumbers(std::string_view text)
-{
-    std::string out;
-    out.reserve(text.size());
-    std::size_t i = 0;
-    while (i < text.size()) {
-        const char c = text[i];
-        if (c == '"') {
-            // Copy the whole string literal, honoring backslash escapes.
-            const std::size_t start = i++;
-            while (i < text.size() && text[i] != '"') {
-                i += text[i] == '\\' ? 2 : 1;
-            }
-            i = std::min(i + 1, text.size());
-            out.append(text.substr(start, i - start));
-        } else if (c == '-' || (c >= '0' && c <= '9')) {
-            const std::size_t start = i;
-            while (i < text.size() &&
-                   std::string_view("+-0123456789.eE").find(text[i]) != std::string_view::npos) {
-                ++i;
-            }
-            const std::string literal(text.substr(start, i - start));
-            const double value = std::strtod(literal.c_str(), nullptr);
-            if (std::isfinite(value)) {
-                out += literal;
-            } else {
-                out += kNonFiniteSentinel;
-            }
-        } else {
-            out += c;
-            ++i;
-        }
-    }
-    return out;
-}
-
-// JSON pointer escaping (RFC 6901): "~" -> "~0", "/" -> "~1".
-std::string pointerToken(std::string_view key)
-{
-    std::string token;
-    for (const char c : key) {
-        if (c == '~') {
-            token += "~0";
-        } else if (c == '/') {
-            token += "~1";
-        } else {
-            token += c;
-        }
-    }
-    return token;
-}
-
-// Validates parsed JSON against the marker format, remembering the first
-// problem with its line. Every read function returns false once an error is
-// recorded, so callers can simply stop.
-class Reader {
+// The marker-file rules on top of the shared JSON reader.
+class MarkerReader : public detail::JsonReader {
 public:
-    Reader(std::string_view text, std::string_view file) : text_(text), file_(file) {}
-
-    [[nodiscard]] const LoadError& error() const { return error_; }
-
-    // Line (1-based) of a byte offset in the text.
-    [[nodiscard]] std::size_t lineAt(std::size_t offset) const
-    {
-        const std::size_t end = std::min(offset, text_.size());
-        std::size_t line = 1;
-        for (std::size_t i = 0; i < end; ++i) {
-            if (text_[i] == '\n') {
-                ++line;
-            }
-        }
-        return line;
-    }
-
-    bool failAtLine(std::size_t line, std::string field, std::string message)
-    {
-        error_ = LoadError{std::string(file_), line, std::move(field), std::move(message)};
-        return false;
-    }
-
-    // Records an error at the line where `value` starts (positions are kept by
-    // nlohmann/json's JSON_DIAGNOSTIC_POSITIONS).
-    bool fail(const Json& value, std::string field, std::string message)
-    {
-        const std::size_t start = value.start_pos();
-        return failAtLine(start == std::string::npos ? 1 : lineAt(start), std::move(field),
-                          std::move(message));
-    }
-
-    // Rejects keys outside `allowed` (catches typos).
-    bool onlyKeys(const Json& object, const std::string& pointer,
-                  std::initializer_list<std::string_view> allowed)
-    {
-        for (const auto& [key, value] : object.items()) {
-            if (std::find(allowed.begin(), allowed.end(), key) == allowed.end()) {
-                return fail(value, pointer + "/" + pointerToken(key),
-                            "unknown key \"" + key + "\"");
-            }
-        }
-        return true;
-    }
-
-    // Finds a required member; a missing one is reported at the object's line.
-    const Json* member(const Json& object, const std::string& pointer, std::string_view key)
-    {
-        const auto it = object.find(key);
-        if (it == object.end()) {
-            fail(object, pointer + "/" + std::string(key), "missing required field");
-            return nullptr;
-        }
-        return &*it;
-    }
-
-    bool readString(const Json& value, const std::string& pointer, std::string& out)
-    {
-        if (!value.is_string() || value.get<std::string>() == kNonFiniteValue) {
-            return fail(value, pointer, "must be a string");
-        }
-        out = value.get<std::string>();
-        if (out.empty()) {
-            return fail(value, pointer, "must not be empty");
-        }
-        return true;
-    }
-
-    bool readNumber(const Json& value, const std::string& pointer, double& out)
-    {
-        if (value.is_string() && value.get<std::string>() == kNonFiniteValue) {
-            return fail(value, pointer, "must be finite");
-        }
-        if (!value.is_number()) {
-            return fail(value, pointer, "must be a number");
-        }
-        out = value.get<double>();
-        if (!std::isfinite(out)) {
-            return fail(value, pointer, "must be finite");
-        }
-        return true;
-    }
-
-    bool readInt(const Json& value, const std::string& pointer, int& out)
-    {
-        if (!value.is_number_integer()) {
-            return fail(value, pointer, "must be an integer");
-        }
-        if (value.is_number_unsigned()) {
-            const auto v = value.get<std::uint64_t>();
-            if (v > static_cast<std::uint64_t>(std::numeric_limits<int>::max())) {
-                return fail(value, pointer, "is out of range");
-            }
-            out = static_cast<int>(v);
-            return true;
-        }
-        const auto v = value.get<std::int64_t>();
-        if (v < std::numeric_limits<int>::min() || v > std::numeric_limits<int>::max()) {
-            return fail(value, pointer, "is out of range");
-        }
-        out = static_cast<int>(v);
-        return true;
-    }
-
-    bool readVec3(const Json& value, const std::string& pointer, math::Vec3& out)
-    {
-        if (!value.is_array() || value.size() != 3) {
-            return fail(value, pointer, "must be an array of 3 numbers");
-        }
-        std::array<double, 3> v{};
-        for (std::size_t i = 0; i < 3; ++i) {
-            if (!readNumber(value[i], pointer + "/" + std::to_string(i), v[i])) {
-                return false;
-            }
-        }
-        out = math::Vec3{v[0], v[1], v[2]};
-        return true;
-    }
+    using JsonReader::JsonReader;
 
     bool readWindow(const Json& value, const std::string& pointer, TimeWindow& out)
     {
@@ -357,70 +170,7 @@ public:
         }
         return true;
     }
-
-private:
-    std::string_view text_;
-    std::string_view file_;
-    LoadError error_;
 };
-
-// --- Writing ------------------------------------------------------------------
-
-std::string number(double value)
-{
-    // Shortest text that reads back as exactly the same double.
-    std::array<char, 32> buffer{};
-    const auto result = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value);
-    return std::string(buffer.data(), result.ptr);
-}
-
-std::string jsonString(std::string_view text)
-{
-    std::string out = "\"";
-    for (const char c : text) {
-        switch (c) {
-        case '"':
-            out += "\\\"";
-            break;
-        case '\\':
-            out += "\\\\";
-            break;
-        case '\n':
-            out += "\\n";
-            break;
-        case '\r':
-            out += "\\r";
-            break;
-        case '\t':
-            out += "\\t";
-            break;
-        case '\b':
-            out += "\\b";
-            break;
-        case '\f':
-            out += "\\f";
-            break;
-        default:
-            if (static_cast<unsigned char>(c) < 0x20) {
-                // Other control characters must be \u escapes in JSON.
-                constexpr std::string_view hex = "0123456789abcdef";
-                const auto u = static_cast<unsigned char>(c);
-                out += "\\u00";
-                out += hex[u >> 4U];
-                out += hex[u & 0x0FU];
-            } else {
-                out += c; // UTF-8 bytes pass through unchanged
-            }
-        }
-    }
-    out += '"';
-    return out;
-}
-
-std::string vec3(const math::Vec3& v)
-{
-    return "[" + number(v.x) + ", " + number(v.y) + ", " + number(v.z) + "]";
-}
 
 } // namespace
 
@@ -433,68 +183,26 @@ std::string LoadError::toString() const
 LoadResult loadMarkerSet(std::string_view text, std::string_view fileName)
 {
     LoadResult result;
-    try {
-        // `parsed` is the text nlohmann/json actually read: the input, or the
-        // input with overflowing numbers replaced (see replaceOverflowingNumbers).
-        // Line numbers are counted in it; replacements never change lines.
-        std::string replaced;
-        std::string_view parsed = text;
-        Json root;
-        try {
-            try {
-                root = Json::parse(parsed.begin(), parsed.end());
-            } catch (const Json::out_of_range&) {
-                replaced = replaceOverflowingNumbers(text);
-                parsed = replaced;
-                root = Json::parse(parsed.begin(), parsed.end());
-            }
-        } catch (const Json::parse_error& e) {
-            Reader reader(parsed, fileName);
-            // e.byte is the 1-based index of the last character read.
-            const std::size_t offset = e.byte > 0 ? e.byte - 1 : 0;
-            reader.failAtLine(reader.lineAt(offset), "", e.what());
-            result.error = reader.error();
-            return result;
-        }
-        Reader reader(parsed, fileName);
-        MarkerSet set;
-        if (reader.readDocument(root, set)) {
-            result.value = std::move(set);
-        } else {
-            result.error = reader.error();
-        }
-    } catch (const std::exception& e) {
-        // Validation only reads values whose types were checked, so this should
-        // not happen; still, never let an exception escape.
-        result.value.reset();
-        result.error =
-            LoadError{std::string(fileName), 1, "", std::string("internal error: ") + e.what()};
+    MarkerSet set;
+    const std::optional<LoadError> error = detail::parseAndRead<MarkerReader>(
+        text, fileName,
+        [&set](MarkerReader& reader, const Json& root) { return reader.readDocument(root, set); });
+    if (error) {
+        result.error = *error;
+    } else {
+        result.value = std::move(set);
     }
     return result;
 }
 
 LoadResult loadMarkerSetFile(const std::filesystem::path& path)
 {
-    // UTF-8 file name for errors. path::string() can throw on Windows when the
-    // name has characters outside the system code page; u8string() cannot.
-    const std::u8string utf8 = path.u8string();
-    const std::string fileName(utf8.begin(), utf8.end());
     LoadResult result;
-    try {
-        const std::ifstream in(path, std::ios::binary);
-        if (!in) {
-            result.error = LoadError{fileName, 1, "", "cannot open file"};
-            return result;
-        }
-        std::ostringstream contents;
-        contents << in.rdbuf();
-        return loadMarkerSet(contents.str(), fileName);
-    } catch (const std::exception& e) {
-        // e.g. out of memory reading a huge file; the contract is "never throws".
-        result.value.reset();
-        result.error = LoadError{fileName, 1, "", std::string("cannot read file: ") + e.what()};
+    const std::optional<std::string> text = detail::readTextFile(path, result.error);
+    if (!text) {
         return result;
     }
+    return loadMarkerSet(*text, detail::utf8FileName(path));
 }
 
 std::string writeMarkerSet(const MarkerSet& set)
