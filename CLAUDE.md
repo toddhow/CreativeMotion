@@ -41,7 +41,7 @@ Defaults below are chosen to match where the code is headed (OpenMW) and to keep
 | Dependencies | CMake FetchContent, pinned versions | No system-wide installs required |
 | Physics | [Jolt Physics](https://github.com/jrouwe/JoltPhysics) | MIT license; only the backend module includes Jolt headers |
 | Tests | GoogleTest | Unit, property and replay tests in one runner |
-| Data files | YAML for authored files, JSON for recordings | Confirm format choice |
+| Data files | JSON for authored files and recordings | nlohmann/json for parsing; our own canonical writer (`docs/decisions/0002`) |
 | Debug viewer | raylib + Dear ImGui | Confirm; the headless runner comes first |
 | Platforms | Windows (MSVC), Linux (GCC and Clang) | Both built in CI |
 | CI | GitLab CI (`.gitlab-ci.yml`), GitLab.com hosted runners | Every merge request runs all gates; Windows runners are in beta |
@@ -325,7 +325,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 - [ ] Project name (code uses the placeholder prefix `opas` until decided)
 - [x] License: GPL-3.0-or-later, decided 2026-10-16 (`docs/decisions/0001-license.md`)
 - [ ] C++ standard: confirm C++20 matches OpenMW's current requirement
-- [ ] Authored data format: YAML or JSON
+- [x] Authored data format: JSON, decided 2026-10-16 (`docs/decisions/0002-json-for-authored-data.md`)
 - [ ] Debug viewer library: raylib with Dear ImGui, or an alternative
 - [ ] Where test animations come from: procedural poses first, then which permissively licensed clips
 - [ ] Performance budget per active ragdoll for `docs/budgets.md`
@@ -342,6 +342,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-16 | Authored data format decided: JSON |
 | 2026-10-16 | Added Alignment plugin track (A1 to A4), kinematic modules in the layout and rules, two-repository split |
 | 2026-10-16 | Hosting moved to GitLab: GitLab CI replaces GitHub Actions; "pull request" is now "merge request" |
 | 2026-10-16 | License decided: GPL-3.0-or-later; project name stays open |
