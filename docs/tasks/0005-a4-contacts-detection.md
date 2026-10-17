@@ -56,3 +56,12 @@ Out of scope: finger contact, mesh-sampled body surfaces, an in-game marker edit
 3. **Chains:** the solver supports intermediate bones between a chain's root, mid and end.
 4. **Second framework:** SexLab P+. Research its API and license before designing the adapter.
 5. **Order of work:** as proposed, A4a → A4b → A4c → A4d.
+
+## Reference: Native Animation Framework (read 2026-10-17)
+NAF (`github.com/Deweh/Native-Animation-Framework`, commit `9d8efbfea0e2f6048a59f7a7af8ccf814dd61791`) is an F4SE plugin for Fallout 4. `LICENSE.txt` is GPL-3.0, which is compatible with this project, but its `COPYRIGHT.txt` also says "All rights reserved"; ask toddhow before reusing any code. Only its design is used here: no code is copied, and Fallout 4 addresses do not apply to Skyrim. What informs A4c:
+- **Per-frame pose hook:**
+  - NAF detours `IAnimationGraphManagerHolder::UpdateAnimationGraphManager`, calls the original, then writes its bone transforms. Its `HookedGraphUpdate` also checks `ShouldUpdateAnimation()` (`f4se-plugin/src/BodyAnimation/GraphHook.h`, `RegisterHook` and `HookedGraphUpdate`).
+  - It writes **local** transforms only, and relies on the engine's later world update in the same frame (`NodeAnimationGraph.h:224–235`, `PushOutput`).
+  - The same function exists in Skyrim's CommonLibSSE-NG with Address Library IDs `RELOCATION_ID(32155, 32899)` (`src/RE/I/IAnimationGraphManagerHolder.cpp:69`). It is a **second candidate hook point** for A4c, next to the `UpdateAnimation` virtual. Whether Skyrim also computes world transforms after it within the frame is **unverified** and must be tested in game.
+- **3D reloads:** NAF also hooks `TESObjectREFR::Set3D`, to re-find bone nodes when an actor's 3D is rebuilt (same file). In Skyrim CommonLib, `Set3D` is virtual slot `0x6C` (`include/RE/T/TESObjectREFR.h:288`). A4c should handle 3D reloads the same way, or look nodes up again every frame.
+- **Chains that skip bones** (A4 decision 3): NAF solves in world space, then converts each bone back to a local transform using its actual parent's world transform, found by walking up the hierarchy (`IK.h`, header comment and `CopyIKNodeToNiNode`). That is the planned approach for CreativeMotion: after setting a chain bone's new rotation, recompute the world pose, so the next chain bone's real parent (an intermediate bone) is up to date.
