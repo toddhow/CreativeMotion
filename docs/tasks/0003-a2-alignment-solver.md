@@ -41,3 +41,13 @@ Out of scope: root rotation (yaw) alignment, vertical alignment, chains longer t
 - **Inactive markers:** validated too (actors, bones, regions, numbers).
 - **Settings:** `maxRootShiftM < 0` or non-finite is invalid; `poleSamples < 1` is invalid.
 - **Chain structure:** `midBone` must be a direct child of `rootBone`, and `endBone` of `midBone`. The solver converts world rotations back to local ones.
+
+## Amendments after the fresh review (2026-10-16)
+Known limits (documented, not fixed; a decision for toddhow if they matter in A3):
+- **One pass:** actor 0's chains aim at actor 1's pose before actor 1's IK. If both actors' hands target each other (two hand-to-hand markers), the second solve can move the first actor's target, so a marker can end unmet. `met` reports this honestly. Iterating 2–3 passes would fix it, but that changes the approved design.
+- **Pole parallel to root→target:** IK falls back to the chain's current plane, so rotating the pole cannot change the pose, and remaining penetration is reported without being searched.
+
+Added criteria (tests to be added by the test writer):
+- [ ] Chain structure is validated: `midBone` not a child of `rootBone`, `endBone` not a child of `midBone`, invalid hinge limits, and a zero or non-finite `poleDirection` are each rejected.
+- [ ] Two chains with the same name or the same `endBone` are rejected.
+- [ ] Huge finite input (e.g. a root at 1e308 m) gives `valid == false`, never NaN results marked valid.

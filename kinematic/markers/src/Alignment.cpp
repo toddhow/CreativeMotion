@@ -5,10 +5,13 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <exception>
+#include <initializer_list>
 #include <limits>
 #include <numbers>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace opas::markers {
@@ -201,6 +204,13 @@ std::string prepareActor(const ActorInput& input, int index, ActorState& state)
         }
         if (!(chain.limbRadiusM > 0.0) || !std::isfinite(chain.limbRadiusM)) {
             return what + ": limbRadiusM must be > 0";
+        }
+        // One chain per hand or foot: two chains ending at the same bone would
+        // both be driven by the same marker and fight over the limb.
+        for (const PosedChain& earlier : state.chains) {
+            if (earlier.chain->name == chain.name || earlier.end == *end) {
+                return what + ": name or endBone is used by an earlier chain";
+            }
         }
         state.chains.push_back(PosedChain{&chain, *root, *mid, *end});
     }
@@ -452,6 +462,17 @@ AlignmentResult alignPairUnchecked(const ActorInput& actor0, const ActorInput& a
             math::distance(targetPoint(actors[static_cast<std::size_t>(m.targetActor)], m),
                            sourcePoint(actors[static_cast<std::size_t>(m.sourceActor)], m));
         result.markers.push_back(MarkerResidual{m.id, distance, distance <= m.toleranceM});
+    }
+    // Inputs are finite, but values near the double limit (e.g. 1e308 m) can
+    // still overflow inside the math. Report that instead of returning NaN.
+    const bool finite =
+        isFinite(result.rootShiftM[0]) && isFinite(result.rootShiftM[1]) &&
+        std::all_of(result.markers.begin(), result.markers.end(),
+                    [](const MarkerResidual& r) { return std::isfinite(r.distanceM); }) &&
+        std::all_of(result.limbs.begin(), result.limbs.end(),
+                    [](const LimbCorrection& l) { return std::isfinite(l.penetrationM); });
+    if (!finite) {
+        return fail("input values are too large: the solution overflowed");
     }
     result.valid = true;
     return result;
