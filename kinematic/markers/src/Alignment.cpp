@@ -118,6 +118,20 @@ struct ActorState {
     }
 };
 
+// True when `bone` is a descendant of `ancestor` (at any depth). Parents come
+// first in a valid skeleton, so the walk up always ends.
+bool isBelow(const std::vector<rig::Bone>& bones, std::size_t bone, std::size_t ancestor)
+{
+    int parent = bones[bone].parent;
+    while (parent >= 0) {
+        if (static_cast<std::size_t>(parent) == ancestor) {
+            return true;
+        }
+        parent = bones[static_cast<std::size_t>(parent)].parent;
+    }
+    return false;
+}
+
 std::optional<std::size_t> boneIndex(const rig::Skeleton& skeleton, const std::string& name)
 {
     return rig::findBone(skeleton, name);
@@ -191,9 +205,9 @@ std::string prepareActor(const ActorInput& input, int index, ActorState& state)
         // The solver turns world-space bone rotations back into local ones,
         // which needs mid to hang directly off root and end off mid.
         const auto& bones = input.skeleton.bones;
-        if (bones[*mid].parent != static_cast<int>(*root) ||
-            bones[*end].parent != static_cast<int>(*mid)) {
-            return what + ": midBone must be a child of rootBone and endBone a child of midBone";
+        // Bones in between are allowed (A4c-1); only the order is required.
+        if (!isBelow(bones, *mid, *root) || !isBelow(bones, *end, *mid)) {
+            return what + ": midBone must be below rootBone and endBone below midBone";
         }
         if (!(chain.limits.minBendRad >= 0.0) || !(chain.limits.maxBendRad <= std::numbers::pi) ||
             !(chain.limits.minBendRad <= chain.limits.maxBendRad)) {
@@ -389,8 +403,20 @@ LimbCorrection solveChain(ActorState& self, int selfIndex, const PosedChain& pos
         const Quat midWorld = math::normalized(best.midRotation * self.world[posed.mid].rotation);
         self.local[posed.root].rotation =
             math::normalized(math::conjugate(parentWorldRotation(posed.root)) * rootWorld);
-        // The mid bone's parent is the root bone, whose new world rotation is rootWorld.
-        self.local[posed.mid].rotation = math::normalized(math::conjugate(rootWorld) * midWorld);
+        const int midParent = self.input->skeleton.bones[posed.mid].parent;
+        if (midParent == static_cast<int>(posed.root)) {
+            // Direct child: its parent's new world rotation is rootWorld
+            // exactly (kept this way so A2 results stay bit-identical).
+            self.local[posed.mid].rotation =
+                math::normalized(math::conjugate(rootWorld) * midWorld);
+        } else {
+            // Intermediate bones between root and mid (A4c-1): recompute the
+            // pose so the mid bone's real parent has moved with the root,
+            // then convert against that parent's new world rotation.
+            self.updateWorld();
+            self.local[posed.mid].rotation =
+                math::normalized(math::conjugate(parentWorldRotation(posed.mid)) * midWorld);
+        }
         self.updateWorld();
     }
 
