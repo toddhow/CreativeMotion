@@ -16,28 +16,30 @@ include(FetchContent)
 # Same simulation results on Windows and Linux, so golden replay recordings
 # can be shared between CI platforms. Costs some speed; revisit with the
 # performance budget.
-set(CROSS_PLATFORM_DETERMINISTIC ON CACHE BOOL "" FORCE)
-# Match GoogleTest and our code, which use the DLL MSVC runtime (/MD).
-set(USE_STATIC_MSVC_RUNTIME_LIBRARY OFF CACHE BOOL "" FORCE)
-# Jolt's own comment warns LTO must then be enabled for the whole project too.
-set(INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "" FORCE)
-# We do not own Jolt's warnings; newer compilers must not break our build.
-set(ENABLE_ALL_WARNINGS OFF CACHE BOOL "" FORCE)
-set(ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
-set(ENABLE_OBJECT_STREAM OFF CACHE BOOL "" FORCE)
-# GPU / compute backends are not needed for rigid-body ragdolls.
-set(JPH_USE_DX12 OFF CACHE BOOL "" FORCE)
-set(JPH_USE_VK OFF CACHE BOOL "" FORCE)
-set(JPH_USE_MTL OFF CACHE BOOL "" FORCE)
-set(JPH_USE_CPU_COMPUTE OFF CACHE BOOL "" FORCE)
+if(OPAS_BUILD_PHYSICS)
+  set(CROSS_PLATFORM_DETERMINISTIC ON CACHE BOOL "" FORCE)
+  # Match GoogleTest and our code, which use the DLL MSVC runtime (/MD).
+  set(USE_STATIC_MSVC_RUNTIME_LIBRARY OFF CACHE BOOL "" FORCE)
+  # Jolt's own comment warns LTO must then be enabled for the whole project too.
+  set(INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "" FORCE)
+  # We do not own Jolt's warnings; newer compilers must not break our build.
+  set(ENABLE_ALL_WARNINGS OFF CACHE BOOL "" FORCE)
+  set(ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+  set(ENABLE_OBJECT_STREAM OFF CACHE BOOL "" FORCE)
+  # GPU / compute backends are not needed for rigid-body ragdolls.
+  set(JPH_USE_DX12 OFF CACHE BOOL "" FORCE)
+  set(JPH_USE_VK OFF CACHE BOOL "" FORCE)
+  set(JPH_USE_MTL OFF CACHE BOOL "" FORCE)
+  set(JPH_USE_CPU_COMPUTE OFF CACHE BOOL "" FORCE)
 
-FetchContent_Declare(
-  JoltPhysics
-  URL https://github.com/jrouwe/JoltPhysics/archive/e77f175595e64cb44218cc9d9d56fc365ad0e36a.tar.gz
-  URL_HASH SHA256=1f32328fb763135de10a244568d6ccb2ed9b1e6593fafe6dc6db5b2719d330bd
-  SOURCE_SUBDIR Build
-  SYSTEM
-)
+  FetchContent_Declare(
+    JoltPhysics
+    URL https://github.com/jrouwe/JoltPhysics/archive/e77f175595e64cb44218cc9d9d56fc365ad0e36a.tar.gz
+    URL_HASH SHA256=1f32328fb763135de10a244568d6ccb2ed9b1e6593fafe6dc6db5b2719d330bd
+    SOURCE_SUBDIR Build
+    SYSTEM
+  )
+endif()
 
 # --- nlohmann/json ----------------------------------------------------------
 # v3.12.0, commit 55f93686c01528224f448c19128836e7df245f72 (2025-04-11). MIT.
@@ -45,17 +47,22 @@ FetchContent_Declare(
 # (an option in its CMakeLists.txt at that commit) record each value's byte
 # offset, so loaders can report line numbers. The define is an INTERFACE
 # definition of the target, so every user sees the same layout.
-set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
-set(JSON_Install OFF CACHE BOOL "" FORCE)
-set(JSON_Diagnostic_Positions ON CACHE BOOL "" FORCE)
+# A host project that already provides nlohmann_json keeps its own; it must
+# then build it with JSON_Diagnostic_Positions ON, or loader errors lose their
+# line numbers (see kinematic/markers/CLAUDE.md).
+if(NOT TARGET nlohmann_json::nlohmann_json)
+  set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
+  set(JSON_Install OFF CACHE BOOL "" FORCE)
+  set(JSON_Diagnostic_Positions ON CACHE BOOL "" FORCE)
 
-FetchContent_Declare(
-  nlohmann_json
-  URL https://github.com/nlohmann/json/archive/55f93686c01528224f448c19128836e7df245f72.tar.gz
-  URL_HASH SHA256=67f4cdd9ca930c9c1e130af4a437c7fc98fab77a2846fc2d2a14b4943831f8ef
-  SYSTEM
-)
-FetchContent_MakeAvailable(nlohmann_json)
+  FetchContent_Declare(
+    nlohmann_json
+    URL https://github.com/nlohmann/json/archive/55f93686c01528224f448c19128836e7df245f72.tar.gz
+    URL_HASH SHA256=67f4cdd9ca930c9c1e130af4a437c7fc98fab77a2846fc2d2a14b4943831f8ef
+    SYSTEM
+  )
+  FetchContent_MakeAvailable(nlohmann_json)
+endif()
 
 # --- GoogleTest -------------------------------------------------------------
 # v1.17.0, commit 52eb8108c5bdec04579160ae17225d66034bd723 (2025-04-30). BSD-3-Clause.

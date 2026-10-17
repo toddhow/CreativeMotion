@@ -171,22 +171,19 @@ public:
         return true;
     }
 
-    // Reports the second occurrence of a repeated name.
-    template <typename Item, typename Key>
-    bool unique(const Json& root, std::string_view arrayKey, std::string_view field,
-                const std::vector<Item>& items, Key key, std::string_view what)
+    // Records `name` and reports it at `element`'s `field` if it was seen
+    // before, so a duplicate is reported at its second occurrence, in file
+    // order with every other check. `element` is the item just read, so the
+    // field is known to exist.
+    bool firstOccurrence(std::set<std::string>& seen, const std::string& name, const Json& element,
+                         const std::string& pointer, std::string_view field, std::string_view what)
     {
-        std::set<std::string> seen;
-        for (std::size_t i = 0; i < items.size(); ++i) {
-            const std::string& name = key(items[i]);
-            if (!seen.insert(name).second) {
-                const std::string pointer = "/" + std::string(arrayKey) + "/" + std::to_string(i) +
-                                            "/" + std::string(field);
-                return fail(root[std::string(arrayKey)][i][std::string(field)], pointer,
-                            "duplicate " + std::string(what) + " \"" + name + "\"");
-            }
+        if (seen.insert(name).second) {
+            return true;
         }
-        return true;
+        const std::string key(field);
+        return fail(element.at(key), pointer + "/" + key,
+                    "duplicate " + std::string(what) + " \"" + name + "\"");
     }
 
     bool readDocument(const Json& root, BodyMapping& out)
@@ -212,32 +209,26 @@ public:
             return fail(*version, "/version", "unsupported version (expected 1)");
         }
 
-        const auto limb = [this](const Json& v, const std::string& p, LimbDefinition& o) {
-            return readLimb(v, p, o);
+        std::set<std::string> limbNames;
+        std::set<std::string> regions;
+        std::set<std::string> chainNames;
+        std::set<std::string> chainEnds;
+        const auto limb = [&](const Json& v, const std::string& p, LimbDefinition& o) {
+            return readLimb(v, p, o) &&
+                   firstOccurrence(limbNames, o.name, v, p, "name", "limb name");
         };
-        const auto capsule = [this](const Json& v, const std::string& p, CapsuleRule& o) {
-            return readCapsule(v, p, o);
+        const auto capsule = [&](const Json& v, const std::string& p, CapsuleRule& o) {
+            return readCapsule(v, p, o) &&
+                   firstOccurrence(regions, o.region, v, p, "region", "region");
         };
-        const auto chain = [this](const Json& v, const std::string& p, IkChain& o) {
-            return readChain(v, p, o);
+        const auto chain = [&](const Json& v, const std::string& p, IkChain& o) {
+            return readChain(v, p, o) &&
+                   firstOccurrence(chainNames, o.name, v, p, "name", "chain name") &&
+                   firstOccurrence(chainEnds, o.endBone, v, p, "endBone", "chain endBone");
         };
         return readArray(root, "limbs", out.limbs, limb) &&
-               unique(
-                   root, "limbs", "name", out.limbs,
-                   [](const LimbDefinition& l) -> const std::string& { return l.name; },
-                   "limb name") &&
                readArray(root, "capsules", out.capsules, capsule) &&
-               unique(
-                   root, "capsules", "region", out.capsules,
-                   [](const CapsuleRule& c) -> const std::string& { return c.region; }, "region") &&
-               readArray(root, "ikChains", out.ikChains, chain) &&
-               unique(
-                   root, "ikChains", "name", out.ikChains,
-                   [](const IkChain& c) -> const std::string& { return c.name; }, "chain name") &&
-               unique(
-                   root, "ikChains", "endBone", out.ikChains,
-                   [](const IkChain& c) -> const std::string& { return c.endBone; },
-                   "chain endBone");
+               readArray(root, "ikChains", out.ikChains, chain);
     }
 };
 

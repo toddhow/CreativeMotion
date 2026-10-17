@@ -15,3 +15,4 @@ Depends on `core/math`, `core/rig`, `kinematic/ik` (alignment) and, privately, n
 - Penetration is a sum over capsule overlaps. The pole search keeps a candidate only if it is strictly better (by 1e-9 m), so on ties the smallest rotation and then the chain's own pole win.
 - Shared JSON machinery (`src/JsonSupport.hpp/.cpp`: the reader base class, the parse-and-read driver with line numbers and the non-finite fallback, file reading, canonical number and string writing) serves both marker files and body maps. A new format derives a reader from `detail::JsonReader` and calls `detail::parseAndRead`.
 - Body maps (`docs/formats/bodymap.md`) check structure only. Bone names are checked when a map meets a skeleton (`measureBody`, `alignPair`).
+- When a host project already provides `nlohmann_json`, CreativeMotion uses it instead of fetching its own. That host build must enable `JSON_Diagnostic_Positions`, or loader errors lose their line numbers.

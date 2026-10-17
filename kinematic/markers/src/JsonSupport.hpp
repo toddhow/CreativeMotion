@@ -20,6 +20,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace opas::markers::detail {
 
@@ -31,9 +32,9 @@ using Json = nlohmann::json;
 // parsed again; the replacement keeps every line intact, and the readers
 // below report it as "must be finite". The leading NUL (written \u0000) means
 // no real file contains it.
-constexpr std::string_view kNonFiniteSentinel = "\"\\u0000opas-non-finite-number\"";
+inline constexpr std::string_view kNonFiniteSentinel = "\"\\u0000opas-non-finite-number\"";
 // The decoded sentinel: a NUL byte, then the name (23 bytes in all).
-constexpr std::string_view kNonFiniteValue("\0opas-non-finite-number", 23);
+inline constexpr std::string_view kNonFiniteValue("\0opas-non-finite-number", 23);
 
 // Returns the text with every number literal that overflows a double replaced
 // by kNonFiniteSentinel. String contents are skipped.
