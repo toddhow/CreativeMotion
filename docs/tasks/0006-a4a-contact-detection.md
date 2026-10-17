@@ -32,7 +32,7 @@ Inputs: a `PoseClip`, one `BodyMapping` per actor, and `DetectionSettings` (the 
 
    **High** passes all three, **Medium** exactly two, **Low** one or none. Low contacts are dropped unless `includeLowConfidence`.
 7. **Marker** for a kept contact (format v2):
-   - `id = "a<s>-<sourceBone>-on-a<t>-<region>-<k>"`, where k counts this (s, bone, t, region) pair's runs from 0 in time order. Characters other than letters, digits, `-`, `_` and `.` in the bone and region names become `_`.
+   - `id = "a<s>-<sourceBone>-on-a<t>-<region>-<k>"`, where k counts this (s, bone, t, region) pair's runs from 0 in time order, including runs dropped as Low, so ids do not change with `includeLowConfidence`. Characters other than letters, digits, `-`, `_` and `.` in the bone and region names become `_`.
    - `sourceActor = s`, `targetActor = t`, `sourceBone`, `targetRegion = region`.
    - `offsetM` = mean of `l_f` over the run.
    - `contactDirection` = unit of the mean of `−n_f`, where `n_f` is the unit vector from c to p expressed in the region frame (rotation only). If that mean is zero (e.g. p on the axis every frame), it is `(0, 0, −1)`.
