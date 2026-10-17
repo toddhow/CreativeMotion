@@ -242,7 +242,7 @@ After M1, a side track builds actor alignment for paired animations in Skyrim: t
 ### A3 First plugin release (plugin repository)
 
 - [ ] SKSE plugin built on CommonLibSSE-NG, with a post-graph pose hook for actors in a scene; hook points cited
-- [ ] One framework adapter: whichever exposes scene start, stop, participants and stage most easily
+- [ ] One framework adapter: OStim NG (decided 2026-10-16); target Skyrim SE 1.6.1170
 - [ ] Root alignment only, behind an in-game toggle, plus a recording command for local testing
 - [ ] toddhow judges the result in game across several body-size pairings
 
@@ -342,6 +342,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-16 | A3: first framework is OStim NG; target runtime Skyrim SE 1.6.1170 |
 | 2026-10-16 | Hosting moved to GitHub (both repositories): GitHub Actions replaces GitLab CI; "merge request" is now "pull request" again |
 | 2026-10-16 | Authored data format decided: JSON |
 | 2026-10-16 | Added Alignment plugin track (A1 to A4), kinematic modules in the layout and rules, two-repository split |
