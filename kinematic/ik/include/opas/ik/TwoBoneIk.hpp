@@ -41,6 +41,8 @@ struct TwoBoneResult {
 // If the pole is (nearly) parallel to root -> target, the plane of the current
 // chain is used, and if that is degenerate too, a fixed perpendicular.
 // If target == root, the current root -> end direction is used.
+// Non-finite input (or input so large that lengths overflow) returns
+// valid == false with positions unchanged.
 TwoBoneResult solveTwoBone(const TwoBoneChain& chain, math::Vec3 target, math::Vec3 poleDirection,
                            const HingeLimits& limits);
 

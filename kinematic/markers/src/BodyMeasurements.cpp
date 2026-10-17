@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
+#include <set>
 
 namespace opas::markers {
 namespace {
@@ -30,8 +30,15 @@ MeasureResult measureBody(const rig::Skeleton& skeleton, const BodyMapping& mapp
     }
     const std::vector<math::Transform> world = rig::computeWorldRest(skeleton);
     BodyMeasurements body;
+    // Names must be unique: markers look regions up by name.
+    std::set<std::string> limbNames;
+    std::set<std::string> regions;
 
     for (const LimbDefinition& limb : mapping.limbs) {
+        if (!limbNames.insert(limb.name).second) {
+            result.error = "limb \"" + limb.name + "\": name is used by an earlier limb";
+            return result;
+        }
         if (limb.bones.size() < 2) {
             result.error = "limb \"" + limb.name + "\": needs at least 2 bones";
             return result;
@@ -53,6 +60,10 @@ MeasureResult measureBody(const rig::Skeleton& skeleton, const BodyMapping& mapp
     }
 
     for (const CapsuleRule& rule : mapping.capsules) {
+        if (!regions.insert(rule.region).second) {
+            result.error = "capsule \"" + rule.region + "\": region is used by an earlier capsule";
+            return result;
+        }
         // Written so NaN is rejected too.
         if (!(rule.radiusRatio > 0.0) || !std::isfinite(rule.radiusRatio)) {
             result.error = "capsule \"" + rule.region + "\": radiusRatio must be > 0";

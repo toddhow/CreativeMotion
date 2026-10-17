@@ -20,6 +20,11 @@ double reach(double a, double b, double bendRad)
     return std::sqrt(std::max(0.0, a * a + b * b + 2.0 * a * b * std::cos(bendRad)));
 }
 
+bool isFinite(Vec3 v)
+{
+    return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
+}
+
 bool validLimits(const HingeLimits& limits)
 {
     // Written so NaN fails every comparison and is rejected.
@@ -74,9 +79,18 @@ TwoBoneResult solveTwoBone(const TwoBoneChain& chain, Vec3 target, Vec3 poleDire
     result.mid = chain.mid;
     result.end = chain.end;
 
+    // Reject non-finite input, and input so large that squared lengths
+    // overflow (the distances below would then be infinite): either would
+    // silently produce NaN or collapsed positions.
+    if (!isFinite(chain.root) || !isFinite(chain.mid) || !isFinite(chain.end) ||
+        !isFinite(target) || !isFinite(poleDirection) ||
+        !std::isfinite(math::length(target - chain.root)) ||
+        !std::isfinite(math::length(poleDirection))) {
+        return result;
+    }
     const double a = math::distance(chain.root, chain.mid);
     const double b = math::distance(chain.mid, chain.end);
-    if (!(a > 0.0) || !(b > 0.0) || !validLimits(limits)) {
+    if (!(a > 0.0) || !(b > 0.0) || !std::isfinite(a + b) || !validLimits(limits)) {
         return result;
     }
     result.valid = true;

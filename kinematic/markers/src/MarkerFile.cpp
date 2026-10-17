@@ -2,6 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <array>
 #include <charconv>
 #include <cmath>
@@ -245,7 +246,8 @@ public:
                        "priority", "toleranceM"})) {
             return false;
         }
-        // Fields are checked in file order, so the first problem is reported.
+        // Unknown keys are checked first (alphabetically), then fields in the
+        // format's order; the first problem found is reported.
         const Json* id = member(value, pointer, "id");
         if (id == nullptr || !readString(*id, pointer + "/id", out.id)) {
             return false;
@@ -454,16 +456,26 @@ LoadResult loadMarkerSet(std::string_view text, std::string_view fileName)
 
 LoadResult loadMarkerSetFile(const std::filesystem::path& path)
 {
-    const std::string fileName = path.string();
-    const std::ifstream in(path, std::ios::binary);
-    if (!in) {
-        LoadResult result;
-        result.error = LoadError{fileName, 1, "", "cannot open file"};
+    // UTF-8 file name for errors. path::string() can throw on Windows when the
+    // name has characters outside the system code page; u8string() cannot.
+    const std::u8string utf8 = path.u8string();
+    const std::string fileName(utf8.begin(), utf8.end());
+    LoadResult result;
+    try {
+        const std::ifstream in(path, std::ios::binary);
+        if (!in) {
+            result.error = LoadError{fileName, 1, "", "cannot open file"};
+            return result;
+        }
+        std::ostringstream contents;
+        contents << in.rdbuf();
+        return loadMarkerSet(contents.str(), fileName);
+    } catch (const std::exception& e) {
+        // e.g. out of memory reading a huge file; the contract is "never throws".
+        result.value.reset();
+        result.error = LoadError{fileName, 1, "", std::string("cannot read file: ") + e.what()};
         return result;
     }
-    std::ostringstream contents;
-    contents << in.rdbuf();
-    return loadMarkerSet(contents.str(), fileName);
 }
 
 std::string writeMarkerSet(const MarkerSet& set)

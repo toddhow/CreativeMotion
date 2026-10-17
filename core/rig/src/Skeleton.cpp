@@ -32,7 +32,12 @@ std::string validateSkeleton(const Skeleton& skeleton)
             return describe(i, bone) + ": parent must be -1 or the index of an earlier bone, got " +
                    std::to_string(bone.parent);
         }
-        if (std::abs(math::length(bone.localRest.rotation) - 1.0) > kUnitTolerance) {
+        const math::Vec3 t = bone.localRest.translation;
+        if (!std::isfinite(t.x) || !std::isfinite(t.y) || !std::isfinite(t.z)) {
+            return describe(i, bone) + ": localRest.translation must be finite";
+        }
+        // Written as !(... <= tol) so a NaN rotation is rejected too.
+        if (!(std::abs(math::length(bone.localRest.rotation) - 1.0) <= kUnitTolerance)) {
             return describe(i, bone) + ": localRest.rotation must be a unit quaternion";
         }
     }

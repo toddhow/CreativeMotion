@@ -52,3 +52,7 @@ Every rejection reports file name, 1-based line and the field as a JSON pointer 
 ## Canonical form
 
 `writeMarkerSet` output, which round-trips byte-for-byte: keys in the order above; 2-space indent; arrays of numbers and the `window` object on one line, as in the example; numbers in shortest round-trip form (`std::to_chars`), so `2.0` is written `2`; LF line endings; a trailing newline. An empty `markers` array is written `"markers": []`.
+
+## Duplicate keys
+
+JSON does not define what a repeated key in one object means. This loader keeps the last value and does not report the repeat, so do not repeat keys. (Detecting repeats needs a different parsing mode; tracked as a follow-up.)

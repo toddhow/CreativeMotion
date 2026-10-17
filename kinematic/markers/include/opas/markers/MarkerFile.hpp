@@ -37,6 +37,9 @@ LoadResult loadMarkerSet(std::string_view text, std::string_view fileName);
 // Reads a file from disk, then as loadMarkerSet. Never throws.
 LoadResult loadMarkerSetFile(const std::filesystem::path& path);
 
+// The set must be valid (as loadMarkerSet would accept it): non-empty unique
+// ids, finite numbers, unit contactDirection. An invalid set is written as
+// given and will not load back.
 // Canonical text: fixed key order, 2-space indent, LF line endings, trailing
 // newline, numbers in shortest round-trip form. Loading this text and writing
 // it again gives the same bytes.

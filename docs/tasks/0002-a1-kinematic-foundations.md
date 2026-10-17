@@ -46,3 +46,12 @@ Constraints:
 - [ ] All presets build and pass on Windows locally; clang-format and clang-tidy clean; Jolt include check still passes.
 
 Out of scope: chain (> 2 bone) IK, the alignment solver (A2), contact detection from clips (A4), skeleton/body-map file formats (M2 / later), any SKSE or game code.
+
+## Amendments after the fresh review (2026-10-16)
+
+The reviewer found inputs the draft left unstated; headers and docs now define them. Added criteria (tests to be added by the test writer):
+- [ ] `validateSkeleton` rejects a NaN rotation and a non-finite translation, naming the bone and field.
+- [ ] `solveTwoBone` returns `valid == false` with positions unchanged for a NaN or infinite target, pole or chain point, and for a target so far away (e.g. 1e200 m) that lengths overflow.
+- [ ] `loadMarkerSetFile` never throws: a path with non-ASCII characters that does not exist gives an error whose `file` is the UTF-8 path.
+- [ ] `measureBody` rejects a duplicate limb name and a duplicate capsule region, naming it.
+- Documented, not tested: repeated JSON keys keep the last value (markers.md); `writeMarkerSet` expects a valid set (MarkerFile.hpp).
