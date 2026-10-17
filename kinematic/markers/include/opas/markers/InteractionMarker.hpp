@@ -33,7 +33,7 @@ struct InteractionMarker {
 };
 
 struct MarkerSet {
-    static constexpr int kFormatVersion = 1; // becomes 2 (actor fields) once A2 is approved
+    static constexpr int kFormatVersion = 2; // 2 added sourceActor/targetActor (A2)
     std::vector<InteractionMarker> markers;
     friend bool operator==(const MarkerSet&, const MarkerSet&) = default;
 };

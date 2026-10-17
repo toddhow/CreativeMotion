@@ -7,10 +7,12 @@ Authored contact points for one paired animation. Read by `opas::markers::loadMa
 ```json
 {
   "format": "opas.markers",
-  "version": 1,
+  "version": 2,
   "markers": [
     {
       "id": "rightHandOnShoulder",
+      "sourceActor": 0,
+      "targetActor": 1,
       "sourceBone": "RightHand",
       "targetRegion": "LeftUpperArm",
       "offsetM": [0.02, -0.01, 0.12],
@@ -28,9 +30,11 @@ Authored contact points for one paired animation. Read by `opas::markers::loadMa
 | Field | Type | Rule |
 | --- | --- | --- |
 | `format` | string | exactly `"opas.markers"` |
-| `version` | integer | exactly `1` |
+| `version` | integer | exactly `2` (version 1, without actor fields, is no longer read) |
 | `markers` | array of marker objects | may be empty |
 | `id` | string | non-empty, unique in the file |
+| `sourceActor` | integer | `>= 0`; index of the actor whose `sourceBone` makes contact |
+| `targetActor` | integer | `>= 0` and different from `sourceActor`; index of the actor owning `targetRegion` |
 | `sourceBone` | string | non-empty; a bone name on the acting actor |
 | `targetRegion` | string | non-empty; a body region (a `CapsuleRule::region`) on the other actor |
 | `offsetM` | array of 3 numbers | meters, in the target region's frame |

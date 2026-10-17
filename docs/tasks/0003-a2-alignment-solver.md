@@ -1,5 +1,5 @@
 # Task: A2 Alignment solver
-Status: draft — awaiting toddhow's review of the design and the two decisions below.
+Status: design approved by toddhow on 2026-10-16 (format v2 with actor fields; IK chains in BodyMapping).
 Design doc section: CLAUDE.md → "Alignment plugin track" → A2.
 Goal: Given two posed actors of different body sizes and a marker set, move their roots so the markers come within reach (sharing the correction), then bend limbs with two-bone IK to meet each marker, keeping limbs out of the other actor's body capsules.
 
