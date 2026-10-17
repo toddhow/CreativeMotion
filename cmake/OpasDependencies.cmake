@@ -70,7 +70,9 @@ if(OPAS_BUILD_TESTS)
     URL_HASH SHA256=745c55415660044610f7fcd3af7a6420d5de16a7dbb9ebfe2e131275676232be
     SYSTEM
   )
-  FetchContent_MakeAvailable(JoltPhysics googletest)
-else()
+  FetchContent_MakeAvailable(googletest)
+endif()
+
+if(OPAS_BUILD_PHYSICS)
   FetchContent_MakeAvailable(JoltPhysics)
 endif()

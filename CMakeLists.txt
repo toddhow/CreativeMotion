@@ -17,7 +17,14 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(FATAL_ERROR "In-source builds are not allowed. Use a preset, e.g. `cmake --preset debug`.")
 endif()
 
-option(OPAS_BUILD_TESTS "Build the test runner" ON)
+# When CreativeMotion is pulled into another project (the CreativeAlignment
+# plugin uses it as a submodule for the kinematic libraries), tests and the
+# Jolt physics layer default off so the host does not build them.
+option(OPAS_BUILD_TESTS "Build the test runner" ${PROJECT_IS_TOP_LEVEL})
+option(OPAS_BUILD_PHYSICS "Build physics/ (fetches Jolt)" ${PROJECT_IS_TOP_LEVEL})
+if(OPAS_BUILD_TESTS AND NOT OPAS_BUILD_PHYSICS)
+  message(FATAL_ERROR "OPAS_BUILD_TESTS needs OPAS_BUILD_PHYSICS (the test runner covers physics too).")
+endif()
 option(OPAS_SANITIZE "Build everything with AddressSanitizer (and UBSan where the compiler supports it)" OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -31,7 +38,9 @@ opas_enable_sanitizers_globally()
 include(OpasDependencies)
 
 add_subdirectory(core)
-add_subdirectory(physics)
+if(OPAS_BUILD_PHYSICS)
+  add_subdirectory(physics)
+endif()
 add_subdirectory(kinematic)
 
 if(OPAS_BUILD_TESTS)
