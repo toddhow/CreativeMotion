@@ -47,7 +47,7 @@ Describe which bones of a skeleton form limbs, body capsules (regions) and IK ch
 | chain `poleDirection` | array of 3 numbers | finite, not all zero; in the actor's root frame |
 | chain `limbRadiusM` | number | `> 0`, meters |
 
-All fields are required; unknown keys are errors; numbers must be finite. Whether the named bones exist, and whether chain bones are parent and child, is checked when the map is used with a skeleton (`measureBody`, `alignPair`), not here.
+All fields are required; unknown keys are errors; numbers must be finite. Whether the named bones exist, and whether each chain's mid bone is below its root bone and its end bone below its mid bone (at any depth), is checked when the map is used with a skeleton (`measureBody`, `alignPair`), not here.
 
 ## Errors
 

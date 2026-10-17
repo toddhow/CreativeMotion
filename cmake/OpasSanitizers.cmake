@@ -26,7 +26,8 @@ endfunction()
 # cl.exe and is only on PATH inside a Developer Command Prompt. Elsewhere every
 # launch of the executable fails with a "clang_rt.asan_dynamic-x86_64.dll was
 # not found" dialog (one per test). Copying the DLL next to the executable
-# makes it start from any shell.
+# makes it start from any shell. Assumes x64 cl.exe (the only MSVC setup the
+# project builds today); clang-cl or other targets would need another DLL name.
 function(opas_copy_sanitizer_runtime target)
   if(NOT OPAS_SANITIZE OR NOT MSVC)
     return()

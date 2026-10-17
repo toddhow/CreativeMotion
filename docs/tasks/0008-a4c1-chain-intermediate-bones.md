@@ -22,3 +22,10 @@ Constraints: no change in results for chains that are direct parent and child (a
 - [ ] All existing tests pass; all presets; format and lint clean.
 
 Out of scope: the in-game pose hook (A4c-2, plugin), validation with IK (a later A4b extension).
+
+## Review notes (2026-10-17)
+- Rule 3.1 wording: for a direct child (mid's parent is root), the code skips the intermediate recompute and converts mid against the root's new world rotation directly. The result is identical and it keeps A2 results bit-identical.
+- Chains are solved in mapping order. A chain rooted above another chain's bones (e.g. at Chest) can move that chain's already-solved end, and the marker then reports unmet. This was possible before with direct chains and is now documented in kinematic/markers/CLAUDE.md. Rejecting overlapping chains is a possible later rule, toddhow's call.
+- Rule 4's bone-length part is checked only by the test's own forward kinematics, not on the solver's pose. The end position is checked on real output through the marker residual.
+- Hot path: the intermediate branch adds one world-pose recompute (one allocation) per chain. A4c-2 calls the solver every frame and should reuse a buffer there.
+- Open: AlignmentGoldens.hpp holds exact MSVC bit patterns. Linux CI may differ in the last bits of libm results; changing the test needs toddhow's approval.

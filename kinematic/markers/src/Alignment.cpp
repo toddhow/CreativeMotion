@@ -202,10 +202,9 @@ std::string prepareActor(const ActorInput& input, int index, ActorState& state)
             message += '"';
             return message;
         }
-        // The solver turns world-space bone rotations back into local ones,
-        // which needs mid to hang directly off root and end off mid.
+        // Bones in between are allowed (A4c-1): they keep their local
+        // transforms and ride along. Only the order root > mid > end is required.
         const auto& bones = input.skeleton.bones;
-        // Bones in between are allowed (A4c-1); only the order is required.
         if (!isBelow(bones, *mid, *root) || !isBelow(bones, *end, *mid)) {
             return what + ": midBone must be below rootBone and endBone below midBone";
         }
