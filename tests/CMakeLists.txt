@@ -10,6 +10,7 @@ add_executable(opas_tests
   unit/kinematic_markers/AlignmentScenesTest.cpp
   unit/kinematic_markers/AlignmentTest.cpp
   unit/kinematic_markers/BodyMapLoadTest.cpp
+  unit/kinematic_markers/ChainIntermediateBonesTest.cpp
   unit/kinematic_markers/ContactReviewTest.cpp
   unit/kinematic_markers/ContactRulesTest.cpp
   unit/kinematic_markers/ContactScenariosTest.cpp
