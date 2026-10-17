@@ -13,6 +13,7 @@
 #include <format>
 #include <iostream>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -56,6 +57,9 @@ std::optional<std::vector<double>> parseScales(std::string_view text)
             break;
         }
         text.remove_prefix(comma + 1);
+        if (text.empty()) {
+            return std::nullopt; // a trailing comma, e.g. "0.8,1,"
+        }
     }
     return scales;
 }
@@ -63,6 +67,7 @@ std::optional<std::vector<double>> parseScales(std::string_view text)
 std::optional<Arguments> parse(int argc, const char* const* argv, std::string& problem)
 {
     Arguments args;
+    std::set<std::string> seen; // each flag may appear once
     for (int i = 1; i < argc; ++i) {
         const std::string_view flag = argv[i];
         if (i + 1 >= argc) {
@@ -70,6 +75,14 @@ std::optional<Arguments> parse(int argc, const char* const* argv, std::string& p
             return std::nullopt;
         }
         const std::string_view value = argv[++i];
+        if (value.starts_with("--")) {
+            problem = std::format("{} needs a value, got the flag \"{}\"", flag, value);
+            return std::nullopt;
+        }
+        if (!seen.insert(std::string(flag)).second) {
+            problem = std::format("{} is given more than once", flag);
+            return std::nullopt;
+        }
         if (flag == "--markers") {
             args.markers = value;
         } else if (flag == "--clip") {
@@ -106,8 +119,6 @@ std::string joinFailures(const opas::markers::MarkerValidation& m)
     }
     return out;
 }
-
-} // namespace
 
 int run(int argc, const char* const* argv)
 {
@@ -167,6 +178,7 @@ int run(int argc, const char* const* argv)
                              report.markers.size() - passed);
     return report.allPassed() ? kAllPassed : kSomeFailed;
 }
+} // namespace
 
 // The standard fixes main's signature, so argv cannot be made const here.
 int main(int argc, char** argv) // NOLINT(misc-const-correctness)

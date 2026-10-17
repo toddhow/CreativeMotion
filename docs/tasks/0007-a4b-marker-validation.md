@@ -38,3 +38,7 @@ Out of scope: limb IK in validation (A4c), the plugin.
 - `allPassed()` is false for an invalid report (`valid == false`), and true for a valid report with no markers.
 - The frame index rounds half away from zero (`std::round`). A window starting before the clip uses frame 0, one starting after it the last frame.
 - The tool prints the PASS/FAIL lines and the summary on standard output, and errors (bad arguments, load errors, an invalid report) on standard error. The summary line is `summary: <passed> passed, <failed> failed`. Scales print in shortest form (`1`, `0.8`, `1.25`). A scale of 0 or less is a bad argument (exit 2).
+
+## Fresh review (2026-10-17): fixed
+- The tool rejects a trailing comma in `--scales`, a flag given twice, and a flag whose value is another flag (`--markers --clip …`). Each exits 2 with a clear message.
+- A window starting at +infinity uses the last frame and NaN uses frame 0, matching the clamping rule.

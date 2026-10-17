@@ -64,5 +64,5 @@ Out of scope: the plugin's recorder (A4c side), the validation pass (A4b), IK ch
   - a `-0.0` round trip in the pose clip, marker and body map writers;
   - two limbs sharing a last bone;
   - an in-memory clip with mismatched frame counts or frame sizes;
-  - NaN and infinite transforms giving no contact;
+  - NaN and infinite transforms giving no contact. Any non-finite position or rotation involved in a frame makes it a non-contact frame; `valid` stays true;
   - colliding sanitized ids keeping a fixed order.

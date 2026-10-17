@@ -49,7 +49,9 @@ std::size_t frameFor(const InteractionMarker& marker, const PoseClip& clip)
 {
     const double exact = std::round(marker.window.startS * clip.sampleRateHz);
     const double last = static_cast<double>(clip.frameCount() - 1);
-    const double clamped = std::clamp(std::isfinite(exact) ? exact : 0.0, 0.0, last);
+    // NaN uses frame 0; +/-infinity clamp to the last / first frame like any
+    // other out-of-range time.
+    const double clamped = std::isnan(exact) ? 0.0 : std::clamp(exact, 0.0, last);
     return static_cast<std::size_t>(clamped);
 }
 

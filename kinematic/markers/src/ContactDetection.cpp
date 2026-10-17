@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <exception>
+#include <limits>
 #include <map>
 #include <optional>
 #include <string>
@@ -14,8 +15,14 @@
 namespace opas::markers {
 namespace {
 
+using math::Quat;
 using math::Transform;
 using math::Vec3;
+
+bool isFinite(Vec3 v)
+{
+    return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
+}
 
 // Below this length the mean contact normal counts as zero (rule 7 fallback).
 constexpr double kZeroDirection = 1e-12;
@@ -111,6 +118,13 @@ std::vector<FrameSample> sample(const PoseClip& clip, const Candidate& c)
         const Vec3 closest = closestOnSegment(p, a, b);
         const Vec3 outward = p - closest;
         out[f].distance = math::length(outward) - radius;
+        // A frame with any non-finite input is never a contact frame: NaN
+        // fails `d <= threshold`, so the run ends there (review amendment).
+        const Quat& q = regionFrame.rotation;
+        if (!isFinite(p) || !isFinite(a) || !isFinite(b) || !std::isfinite(q.x) ||
+            !std::isfinite(q.y) || !std::isfinite(q.z) || !std::isfinite(q.w)) {
+            out[f].distance = std::numeric_limits<double>::quiet_NaN();
+        }
         out[f].local = math::transformPoint(math::inverse(regionFrame), p);
         const Vec3 n = math::normalized(outward); // zero if p is on the axis
         out[f].inward = math::rotate(math::conjugate(regionFrame.rotation), -n);
