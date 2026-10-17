@@ -1,0 +1,34 @@
+{
+  "format": "opas.bodymap",
+  "version": 1,
+  "limbs": [
+    {"name": "RightArm", "bones": ["RightUpperArm", "RightForearm", "RightHand"]},
+    {"name": "LeftArm", "bones": ["LeftUpperArm", "LeftForearm", "LeftHand"]}
+  ],
+  "capsules": [
+    {"region": "RightForearm", "bone": "RightForearm", "endBone": "RightHand", "radiusRatio": 0.15},
+    {"region": "UpperBack", "bone": "Spine", "endBone": "Neck", "radiusRatio": 0.1667}
+  ],
+  "ikChains": [
+    {
+      "name": "RightArm",
+      "rootBone": "RightUpperArm",
+      "midBone": "RightForearm",
+      "endBone": "RightHand",
+      "minBendRad": 0,
+      "maxBendRad": 2.6,
+      "poleDirection": [0, -1, 0],
+      "limbRadiusM": 0
+    },
+    {
+      "name": "LeftArm",
+      "rootBone": "LeftUpperArm",
+      "midBone": "LeftForearm",
+      "endBone": "LeftHand",
+      "minBendRad": 0.1,
+      "maxBendRad": 2.5,
+      "poleDirection": [-0.35, -0.2, -0.9],
+      "limbRadiusM": 0.03
+    }
+  ]
+}

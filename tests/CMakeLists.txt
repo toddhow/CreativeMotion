@@ -9,6 +9,7 @@ add_executable(opas_tests
   unit/kinematic_ik/TwoBoneIkTest.cpp
   unit/kinematic_markers/AlignmentScenesTest.cpp
   unit/kinematic_markers/AlignmentTest.cpp
+  unit/kinematic_markers/BodyMapLoadTest.cpp
   unit/kinematic_markers/BodyMeasurementsTest.cpp
   unit/kinematic_markers/MarkerLoadTest.cpp
   unit/physics_jolt/BackendInfoTest.cpp
@@ -24,6 +25,8 @@ add_executable(opas_tests
   unit/physics_jolt/ValidationTest.cpp
   property/core_math/QuatNormalizationPropertyTest.cpp
   property/kinematic_ik/TwoBoneIkPropertyTest.cpp
+  roundtrip/kinematic_markers/BodyMapHumanoidRoundTripTest.cpp
+  roundtrip/kinematic_markers/BodyMapRoundTripTest.cpp
   roundtrip/kinematic_markers/MarkerRoundTripTest.cpp
 )
 
