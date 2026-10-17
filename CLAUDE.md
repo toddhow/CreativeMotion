@@ -241,7 +241,7 @@ After M1, a side track builds actor alignment for paired animations in Skyrim: t
 
 ### A3 First plugin release (plugin repository)
 
-- [ ] SKSE plugin built on CommonLibSSE-NG, with a post-graph pose hook for actors in a scene; hook points cited
+- [ ] SKSE plugin built on CommonLibSSE-NG that samples the scene actors' posed skeletons once per scene node (the per-frame pose hook moves to A4)
 - [ ] One framework adapter: OStim NG (decided 2026-10-16); target Skyrim SE 1.6.1170
 - [ ] Root alignment only, behind an in-game toggle, plus a recording command for local testing
 - [ ] toddhow judges the result in game across several body-size pairings
@@ -249,7 +249,7 @@ After M1, a side track builds actor alignment for paired animations in Skyrim: t
 ### A4 Contacts and detection
 
 - [ ] Automatic marker detection from paired clips (distance, duration, relative motion) with confidence tiers
-- [ ] Hand and foot contact IK in game, and the second framework adapter
+- [ ] Hand and foot contact IK in game through a post-graph pose hook (hook points cited), and the second framework adapter
 - [ ] A validation pass flags stages whose markers cannot be met
 
 Later, not scheduled: body surfaces from mesh sampling, finger contact, an in-game marker editor, community presets.
@@ -342,6 +342,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-16 | A3 design approved: root alignment through OStim's alignment API, poses sampled per node; the per-frame pose hook moves to A4; body maps become a JSON format (A3a) |
 | 2026-10-16 | A3: first framework is OStim NG; target runtime Skyrim SE 1.6.1170 |
 | 2026-10-16 | Hosting moved to GitHub (both repositories): GitHub Actions replaces GitLab CI; "merge request" is now "pull request" again |
 | 2026-10-16 | Authored data format decided: JSON |
