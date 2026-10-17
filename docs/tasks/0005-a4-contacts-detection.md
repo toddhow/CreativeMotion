@@ -1,5 +1,5 @@
 # Task: A4 Contacts and detection
-Status: draft — awaiting toddhow's decisions below. (toddhow authorized starting A4 once A3 is done, 2026-10-17.)
+Status: decisions made by toddhow on 2026-10-17 (below); A4a in progress.
 Design doc section: CLAUDE.md → "Alignment plugin track" → A4.
 Goal: Markers are found automatically from recorded paired clips; hands and feet meet their contacts in game through per-frame IK; a second framework is supported; scenes whose markers cannot be met are flagged.
 
@@ -49,3 +49,10 @@ A4 spans both repositories, as the track requires. Engine-independent parts land
 - [ ] Plugin: the second framework adapter starts and stops alignment for its scenes (after A4d research).
 
 Out of scope: finger contact, mesh-sampled body surfaces, an in-game marker editor, community presets (all "later" in the guide).
+
+## Decisions (toddhow, 2026-10-17)
+1. **Thresholds:** start with distance 3 cm, duration 0.25 s, relative speed 0.2 m/s, stored in a tunable JSON detection profile.
+2. **Recording:** F11 starts recording at 30 Hz and F11 again stops it, capped at 60 s.
+3. **Chains:** the solver supports intermediate bones between a chain's root, mid and end.
+4. **Second framework:** SexLab P+. Research its API and license before designing the adapter.
+5. **Order of work:** as proposed, A4a → A4b → A4c → A4d.
