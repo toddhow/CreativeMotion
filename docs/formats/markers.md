@@ -49,6 +49,11 @@ Every rejection reports file name, 1-based line and the field as a JSON pointer 
 - a missing field: the line where the enclosing object starts, field = the missing field's pointer;
 - an unknown key: the line where its value starts.
 
+Decided defaults (toddhow, 2026-10-16):
+- `startS` greater than `endS` is reported at `.../window/startS`.
+- Unknown keys are checked before missing ones, so a misspelled key is reported as unknown (not as the real key missing).
+- Line endings: LF is the format; CRLF loads correctly but is not formally supported or tested. CR-only files count as one line.
+
 ## Canonical form
 
 `writeMarkerSet` output, which round-trips byte-for-byte: keys in the order above; 2-space indent; arrays of numbers and the `window` object on one line, as in the example; numbers in shortest round-trip form (`std::to_chars`), so `2.0` is written `2`; LF line endings; a trailing newline. An empty `markers` array is written `"markers": []`.

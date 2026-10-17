@@ -1,5 +1,5 @@
 # Task: A1 Kinematic foundations
-Status: implemented and reviewed; awaiting toddhow's approval.
+Status: done — approved by toddhow on 2026-10-16, with the marker-format defaults recorded in docs/formats/markers.md.
 Design doc section: CLAUDE.md → "Alignment plugin track" → A1.
 Goal: The engine-independent building blocks the alignment solver (A2) needs: math types, a minimal skeleton, two-bone IK with joint limits, interaction markers with a JSON file format, and body measurements.
 Inputs / outputs (new modules, each with a `CLAUDE.md`):

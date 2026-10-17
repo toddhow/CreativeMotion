@@ -229,9 +229,9 @@ After M1, a side track builds actor alignment for paired animations in Skyrim: t
 
 ### A1 Kinematic foundations (main repository)
 
-- [ ] Two-bone IK with joint limits; property tests show reachable targets are reached and unreachable ones clamp cleanly
-- [ ] Interaction marker data model and file format (source bone, target body region, offset, contact direction, time window, priority, tolerance) with round-trip tests
-- [ ] Body measurement model: limb lengths and simple surface capsules from a skeleton
+- [x] Two-bone IK with joint limits; property tests show reachable targets are reached and unreachable ones clamp cleanly
+- [x] Interaction marker data model and file format (source bone, target body region, offset, contact direction, time window, priority, tolerance) with round-trip tests
+- [x] Body measurement model: limb lengths and simple surface capsules from a skeleton
 
 ### A2 Alignment solver (main repository)
 
