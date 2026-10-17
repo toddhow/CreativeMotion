@@ -16,10 +16,10 @@ Constraints: no change in results for chains that are direct parent and child (a
 4. **Results:** after applying, the end bone's world position equals the solved end (within 1e-9 m), and every bone's distance to its parent is unchanged.
 
 ## Acceptance criteria
-- [ ] A synthetic skeleton like XPMSSE's leg, with two intermediate nodes between calf and foot and one between upper arm and forearm (each with a non-identity local transform), aligns a foot marker and a hand marker: the end bone reaches the solved end within 1e-9 m, parent distances are kept, and markers are met as in A2.
-- [ ] The same scene built with direct parent-child chains gives bit-identical results to before this change (A2 behaviour preserved).
-- [ ] Chains whose mid is not below root, or whose end is not below mid (e.g. a sibling, or the reverse order), are rejected with the chain named; a chain through intermediates is accepted.
-- [ ] All existing tests pass; all presets; format and lint clean.
+- [x] A synthetic skeleton like XPMSSE's leg, with two intermediate nodes between calf and foot and one between upper arm and forearm (each with a non-identity local transform), aligns a foot marker and a hand marker: the end bone reaches the solved end within 1e-9 m, parent distances are kept, and markers are met as in A2.
+- [x] The same scene built with direct parent-child chains gives bit-identical results to before this change (A2 behaviour preserved).
+- [x] Chains whose mid is not below root, or whose end is not below mid (e.g. a sibling, or the reverse order), are rejected with the chain named; a chain through intermediates is accepted.
+- [x] All existing tests pass; all presets; format and lint clean.
 
 Out of scope: the in-game pose hook (A4c-2, plugin), validation with IK (a later A4b extension).
 
@@ -28,4 +28,4 @@ Out of scope: the in-game pose hook (A4c-2, plugin), validation with IK (a later
 - Chains are solved in mapping order. A chain rooted above another chain's bones (e.g. at Chest) can move that chain's already-solved end, and the marker then reports unmet. This was possible before with direct chains and is now documented in kinematic/markers/CLAUDE.md. Rejecting overlapping chains is a possible later rule, toddhow's call.
 - Rule 4's bone-length part is checked only by the test's own forward kinematics, not on the solver's pose. The end position is checked on real output through the marker residual.
 - Hot path: the intermediate branch adds one world-pose recompute (one allocation) per chain. A4c-2 calls the solver every frame and should reuse a buffer there.
-- Open: AlignmentGoldens.hpp holds exact MSVC bit patterns. Linux CI may differ in the last bits of libm results; changing the test needs toddhow's approval.
+- AlignmentGoldens.hpp holds exact MSVC bit patterns. Linux libm may round differently in the last bit, so off MSVC the golden test compares doubles within 1e-12 (counts and flags still exact). Test change approved by toddhow, 2026-10-17.

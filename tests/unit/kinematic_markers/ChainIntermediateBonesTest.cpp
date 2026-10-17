@@ -24,6 +24,7 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <bit>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -380,10 +381,26 @@ TEST(ChainIntermediatesRejected, TheMessageNamesTheChainThatBreaksTheRule)
 void expectGolden(const char* name, const Scene& scene, std::span<const std::uint64_t> golden)
 {
     SCOPED_TRACE(name);
-    const std::vector<std::uint64_t> now = opas::test::flatten(alignScene(scene));
-    ASSERT_EQ(now.size(), golden.size());
-    for (std::size_t i = 0; i < now.size(); ++i) {
-        EXPECT_EQ(now[i], golden[i]) << "word " << i;
+    const opas::test::FlatResult now = opas::test::flatten(alignScene(scene));
+    ASSERT_EQ(now.words.size(), golden.size());
+    for (std::size_t i = 0; i < now.words.size(); ++i) {
+#if defined(_MSC_VER) && !defined(__clang__)
+        // The goldens were recorded with MSVC: here the results must match bit for bit.
+        EXPECT_EQ(now.words[i], golden[i]) << "word " << i;
+#else
+        // Another C library may round sin/cos/acos differently in the last bit (see
+        // AlignmentFlatten.hpp); counts and flags must still match exactly. The values are
+        // lengths in meters and quaternion components (order 1), so 1e-12 is a few thousand
+        // ulps: wide enough for libm differences, far below any real behaviour change.
+        constexpr double kGoldenToleranceOffMsvc = 1e-12;
+        if (now.isDouble[i]) {
+            EXPECT_NEAR(std::bit_cast<double>(now.words[i]), std::bit_cast<double>(golden[i]),
+                        kGoldenToleranceOffMsvc)
+                << "word " << i;
+        } else {
+            EXPECT_EQ(now.words[i], golden[i]) << "word " << i;
+        }
+#endif
     }
 }
 
