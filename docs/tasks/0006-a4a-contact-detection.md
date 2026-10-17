@@ -9,7 +9,7 @@ Constraints: deterministic, never throws; loaders follow the marker-file error r
 Inputs: a `PoseClip`, one `BodyMapping` per actor, and `DetectionSettings` (the profile).
 
 1. **Candidates.** For each ordered actor pair (source `s`, target `t`), with `s` ∈ {0, 1} and `t = 1 − s`:
-   - each **source bone** is the last bone of each limb in `s`'s body map (hands and feet in the humanoid map);
+   - each **source bone** is the last bone of each limb in `s`'s body map (hands and feet in the humanoid map). A bone that ends more than one limb counts once, in its first limb's place;
    - each **target region** is each capsule of `t`'s body map.
 
    Every bone a candidate needs must appear in the clip's `bones` for that actor. A missing bone is an error (`valid == false`) naming the actor and bone.
@@ -55,3 +55,14 @@ Inputs: a `PoseClip`, one `BodyMapping` per actor, and `DetectionSettings` (the 
 - [ ] All presets pass; format and lint clean.
 
 Out of scope: the plugin's recorder (A4c side), the validation pass (A4b), IK changes (A4c).
+
+## Review amendments (2026-10-17)
+- Negative zero is written `0` by every writer: nlohmann/json reads `-0` as the integer 0, which broke the byte-for-byte round trip.
+- Rule 1 now says a bone ending several limbs is one candidate. That was already the code's behaviour.
+- **Known limit:** sanitizing is not one-to-one ("A B" and "A_B" give the same id part), so two contacts can share an id. The output order stays deterministic (stable sort), but uniqueness is not guaranteed. Avoid names that differ only in sanitized characters; a decision for toddhow if it matters.
+- Tests to add (test writer):
+  - a `-0.0` round trip in the pose clip, marker and body map writers;
+  - two limbs sharing a last bone;
+  - an in-memory clip with mismatched frame counts or frame sizes;
+  - NaN and infinite transforms giving no contact;
+  - colliding sanitized ids keeping a fixed order.

@@ -252,11 +252,13 @@ DetectionResult detectUnchecked(const PoseClip& clip, const std::array<BodyMappi
     }
 
     // Rule 8: by window start, then id.
-    std::sort(result.contacts.begin(), result.contacts.end(),
-              [](const DetectedContact& a, const DetectedContact& b) {
-                  return std::tie(a.marker.window.startS, a.marker.id) <
-                         std::tie(b.marker.window.startS, b.marker.id);
-              });
+    // stable_sort: two different bone or region names can sanitize to the same
+    // id, and equal keys must still come out in one fixed order everywhere.
+    std::stable_sort(result.contacts.begin(), result.contacts.end(),
+                     [](const DetectedContact& a, const DetectedContact& b) {
+                         return std::tie(a.marker.window.startS, a.marker.id) <
+                                std::tie(b.marker.window.startS, b.marker.id);
+                     });
     result.valid = true;
     return result;
 }

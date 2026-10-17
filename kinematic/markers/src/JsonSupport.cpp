@@ -62,7 +62,12 @@ std::string pointerToken(std::string_view key)
 
 std::string number(double value)
 {
-    // Shortest text that reads back as exactly the same double.
+    // Shortest text that reads back as exactly the same double. Negative zero
+    // is written "0": nlohmann/json reads "-0" as the integer 0, so "-0" would
+    // not survive a load-write round trip byte for byte.
+    if (value == 0.0) {
+        return "0";
+    }
     std::array<char, 32> buffer{};
     const auto result = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value);
     return std::string(buffer.data(), result.ptr);
