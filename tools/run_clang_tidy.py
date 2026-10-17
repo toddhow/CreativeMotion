@@ -13,7 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-OUR_MODULES = ("core", "physics", "sandbox", "tests")
+OUR_MODULES = ("core", "kinematic", "physics", "sandbox", "tests", "tools")
 
 
 def main() -> int:

@@ -21,3 +21,22 @@ function(opas_enable_sanitizers_globally)
     add_link_options(${flags})
   endif()
 endfunction()
+
+# MSVC's /fsanitize=address links against a runtime DLL that lives next to
+# cl.exe and is only on PATH inside a Developer Command Prompt. Elsewhere every
+# launch of the executable fails with a "clang_rt.asan_dynamic-x86_64.dll was
+# not found" dialog (one per test). Copying the DLL next to the executable
+# makes it start from any shell.
+function(opas_copy_sanitizer_runtime target)
+  if(NOT OPAS_SANITIZE OR NOT MSVC)
+    return()
+  endif()
+  get_filename_component(compilerDir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+  set(runtime "${compilerDir}/clang_rt.asan_dynamic-x86_64.dll")
+  if(NOT EXISTS "${runtime}")
+    message(FATAL_ERROR "AddressSanitizer runtime not found at ${runtime}")
+  endif()
+  add_custom_command(TARGET ${target} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${runtime}" "$<TARGET_FILE_DIR:${target}>"
+    VERBATIM)
+endfunction()

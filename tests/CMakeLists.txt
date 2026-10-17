@@ -54,6 +54,7 @@ target_include_directories(opas_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common
 target_compile_definitions(opas_tests PRIVATE
   OPAS_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 opas_set_project_options(opas_tests)
+opas_copy_sanitizer_runtime(opas_tests)
 
 # Interface-only runner. It links nothing but the interface headers and
 # GoogleTest, which proves physics/interface compiles without Jolt. Do not add
@@ -68,6 +69,7 @@ target_link_libraries(opas_interface_tests PRIVATE
   GTest::gtest_main
 )
 opas_set_project_options(opas_interface_tests)
+opas_copy_sanitizer_runtime(opas_interface_tests)
 
 include(GoogleTest)
 # DISCOVERY_MODE PRE_TEST lists tests when ctest runs rather than at build time,
