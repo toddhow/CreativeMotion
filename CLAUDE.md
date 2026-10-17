@@ -235,9 +235,9 @@ After M1, a side track builds actor alignment for paired animations in Skyrim: t
 
 ### A2 Alignment solver (main repository)
 
-- [ ] Root alignment for two actors from body measurements, with the correction split between both
-- [ ] Limb IK satisfies markers within joint limits, with penetration avoidance against capsules
-- [ ] Synthetic test scenes pair very different body sizes; markers are met within the spec's tolerance
+- [x] Root alignment for two actors from body measurements, with the correction split between both
+- [x] Limb IK satisfies markers within joint limits, with penetration avoidance against capsules
+- [x] Synthetic test scenes pair very different body sizes; markers are met within the spec's tolerance
 
 ### A3 First plugin release (plugin repository)
 
