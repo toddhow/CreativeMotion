@@ -36,7 +36,9 @@ struct CapsuleRule {
 
 // A two-bone IK chain the alignment solver may bend, e.g. an arm
 // {rootBone "RightUpperArm", midBone "RightForearm", endBone "RightHand"}.
-// endBone is what a marker's sourceBone names.
+// endBone is what a marker's sourceBone names. midBone must be below rootBone
+// in the skeleton and endBone below midBone, at any depth: bones in between
+// (e.g. XPMSSE's CME nodes) are allowed and move rigidly with their parents.
 struct IkChain {
     std::string name;
     std::string rootBone;
