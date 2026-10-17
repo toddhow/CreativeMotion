@@ -65,3 +65,19 @@ NAF (`github.com/Deweh/Native-Animation-Framework`, commit `9d8efbfea0e2f6048a59
   - The same function exists in Skyrim's CommonLibSSE-NG with Address Library IDs `RELOCATION_ID(32155, 32899)` (`src/RE/I/IAnimationGraphManagerHolder.cpp:69`). It is a **second candidate hook point** for A4c, next to the `UpdateAnimation` virtual. Whether Skyrim also computes world transforms after it within the frame is **unverified** and must be tested in game.
 - **3D reloads:** NAF also hooks `TESObjectREFR::Set3D`, to re-find bone nodes when an actor's 3D is rebuilt (same file). In Skyrim CommonLib, `Set3D` is virtual slot `0x6C` (`include/RE/T/TESObjectREFR.h:288`). A4c should handle 3D reloads the same way, or look nodes up again every frame.
 - **Chains that skip bones** (A4 decision 3): NAF solves in world space, then converts each bone back to a local transform using its actual parent's world transform, found by walking up the hierarchy (`IK.h`, header comment and `CopyIKNodeToNiNode`). That is the planned approach for CreativeMotion: after setting a chain bone's new rotation, recompute the world pose, so the next chain bone's real parent (an intermediate bone) is up to date.
+
+## A4d research: SexLab P+ (read 2026-10-17)
+Sources: the native backend `github.com/SLP-Community/SexLabpp` (commit `d578f8176142e0e77de7734e86e0017763de6a31`) and the Papyrus framework `github.com/SLP-Community/SexLab` (branch `main`).
+- **Licenses:**
+  - The native backend is GPL-3.0-or-later with a Modding Exception and a GPL-3.0 linking exception (`NOTICE`, `EXCEPTIONS.md`). Compatible.
+  - The Papyrus scripts and assets keep the original SexLab permissions (`Readme - SexLab Framework.txt`, "Permissions"): no redistribution outside LoversLab without permission, and no editing except translations.
+  - Our plugin must therefore never ship, copy or modify SexLab's scripts. It only listens to the events SexLab sends.
+- **No native API for other plugins.** The backend exports nothing besides the SKSE plugin entry points, dispatches no plugin messages, and only *consumes* RaceMenu's interface (`src/API/IPluginInterface.h`).
+- **Scene events are Papyrus mod events.**
+  - `sslThreadModel.SendThreadEvent` (`scripts/Source/sslThreadModel.psc:1713–1735`) sends, for each event, a mod event `Hook<Event>` (thread id and has-player), a plain `SendModEvent(<Event>, thread_id)`, and `Player<Event>` when the player takes part.
+  - Events sent (`sslThreadController.psc`): `AnimationStart`, `StageStart`, `StageEnd`, `AnimationChange`, `PositionChange`, `ActorsRelocated`, `OrgasmStart/End`, `AnimationEnding`, `AnimationEnd`, plus `AnimationStarting`, `ActorChangeStart/End` and `LeadInStart/End` (`sslThreadModel.psc`).
+- **Receiving them in SKSE.** CommonLibSSE-NG exposes plain `SendModEvent` calls as `SKSE::ModCallbackEvent` (event name, string argument, number argument, sender) through `SKSE::GetModCallbackEventSource()` (`include/SKSE/API.h:66`, `include/SKSE/Events.h:12`). The thread id arrives in the string argument.
+- **Open design points (before A4d's spec):**
+  - how to get a thread's actors, stage and scene id without SexLab's scripts calling us. Options are reading its Papyrus objects from C++, or a small Papyrus bridge script of our own;
+  - how SexLab places actors, since `ActorsRelocated` shows it repositions them itself, and so what plays OStim's alignment-offset role there;
+  - whether SexLab P+ offers an alignment adjustment we should feed instead of moving actors ourselves (the "consume the framework's API" rule).
