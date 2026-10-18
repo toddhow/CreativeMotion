@@ -202,4 +202,73 @@ TEST(SurfaceSnap, NoSurfaceNearTheLineLeavesTheOffsetUnchanged)
     EXPECT_FALSE(snapOffsetToSurface(offset, Vec3{}, cylinder()).snapped);
 }
 
+// A torso-like region: axis along Z from 0 to 1 m at the origin, radius 0.1,
+// surface points on that cylinder.
+opas::markers::SurfaceRegion torso()
+{
+    opas::markers::SurfaceRegion r;
+    r.region = "Torso";
+    r.axisStartM = Vec3{0, 0, 0};
+    r.axisEndM = Vec3{0, 0, 1};
+    r.radiusM = 0.1;
+    for (int h = 0; h <= 100; ++h) {
+        for (int i = 0; i < 72; ++i) {
+            const double angle = 2.0 * std::numbers::pi * i / 72;
+            r.pointsM.push_back(Vec3{0.1 * std::cos(angle), 0.1 * std::sin(angle), 0.01 * h});
+        }
+    }
+    return r;
+}
+
+TEST(ContactCorrection, AHandJustOffTheBodyIsFullyCorrectedToTheContactDepth)
+{
+    const std::vector<opas::markers::SurfaceRegion> regions{torso()};
+    // 3 cm off the surface on +X: within 4 cm, so the hand ends 2 cm off.
+    const auto c = opas::markers::contactCorrection(Vec3{0.13, 0, 0.5}, regions);
+    ASSERT_TRUE(c);
+    EXPECT_NEAR(c->gapM, 0.03, 0.001);
+    EXPECT_EQ(c->weight, 1.0);
+    EXPECT_NEAR(c->targetM.x, 0.12, 0.001);
+    EXPECT_NEAR(c->targetM.y, 0.0, 1e-9); // slides along the body are kept
+    EXPECT_NEAR(c->targetM.z, 0.5, 1e-9);
+}
+
+TEST(ContactCorrection, AHandInsideTheBodyIsPushedOut)
+{
+    const std::vector<opas::markers::SurfaceRegion> regions{torso()};
+    const auto c = opas::markers::contactCorrection(Vec3{0.08, 0, 0.5}, regions);
+    ASSERT_TRUE(c);
+    EXPECT_LT(c->gapM, 0.0);
+    EXPECT_EQ(c->weight, 1.0);
+    EXPECT_NEAR(c->targetM.x, 0.12, 0.001);
+}
+
+TEST(ContactCorrection, TheCorrectionFadesBetweenFourAndTenCentimetres)
+{
+    const std::vector<opas::markers::SurfaceRegion> regions{torso()};
+    const auto c = opas::markers::contactCorrection(Vec3{0.17, 0, 0.5}, regions); // 7 cm off
+    ASSERT_TRUE(c);
+    EXPECT_GT(c->weight, 0.0);
+    EXPECT_LT(c->weight, 1.0);
+    EXPECT_GT(c->targetM.x, 0.12); // moved part of the way only
+    EXPECT_LT(c->targetM.x, 0.17);
+    EXPECT_FALSE(opas::markers::contactCorrection(Vec3{0.25, 0, 0.5}, regions)); // 15 cm off
+}
+
+TEST(ContactCorrection, TheNearestRegionWins)
+{
+    auto arm = torso();
+    arm.region = "Arm";
+    for (auto& p : arm.pointsM) {
+        p.x += 0.5; // a second cylinder 50 cm away along X
+    }
+    arm.axisStartM.x += 0.5;
+    arm.axisEndM.x += 0.5;
+    const std::vector<opas::markers::SurfaceRegion> regions{torso(), arm};
+    const auto c = opas::markers::contactCorrection(Vec3{0.37, 0, 0.5}, regions); // 3 cm off Arm
+    ASSERT_TRUE(c);
+    EXPECT_EQ(c->region, 1U);
+    EXPECT_FALSE(opas::markers::contactCorrection(Vec3{0.13, 0, 0.5}, {}));
+}
+
 } // namespace

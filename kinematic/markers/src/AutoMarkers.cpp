@@ -139,6 +139,70 @@ AutoAuthorResult autoAuthorMarkers(const PoseClip& clip, const std::array<BodyMa
     }
 }
 
+namespace {
+
+// A7b's surface-layer rule: among points within `radius` of the line
+// from + s * d (d unit) with |s| <= maxAlong, the nearest layer (smallest |s|
+// plus kSheetM of depth), and in it the point closest to the line; returns
+// that point's s, or nullopt when no point is near the line.
+std::optional<double> nearestLayerAlong(math::Vec3 from, math::Vec3 d,
+                                        std::span<const math::Vec3> points, double radius,
+                                        double maxAlong)
+{
+    double nearestAlong = std::numeric_limits<double>::infinity();
+    for (const math::Vec3& q : points) {
+        if (!isFinite(q)) {
+            continue;
+        }
+        const math::Vec3 w = q - from;
+        const double along = math::dot(w, d);
+        if (math::length(w - along * d) <= radius && std::abs(along) <= maxAlong) {
+            nearestAlong = std::min(nearestAlong, std::abs(along));
+        }
+    }
+    if (!std::isfinite(nearestAlong)) {
+        return std::nullopt;
+    }
+    // Within the nearest layer, the point closest to the line, so a point at
+    // the edge of the search tube cannot pull the result short of a curved
+    // surface.
+    double bestFromLine = std::numeric_limits<double>::infinity();
+    double bestAlong = 0.0;
+    for (const math::Vec3& q : points) {
+        if (!isFinite(q)) {
+            continue;
+        }
+        const math::Vec3 w = q - from;
+        const double along = math::dot(w, d);
+        const double fromLine = math::length(w - along * d);
+        if (fromLine <= radius && std::abs(along) <= nearestAlong + kSheetM &&
+            fromLine < bestFromLine) { // strict: ties keep the earlier point
+            bestFromLine = fromLine;
+            bestAlong = along;
+        }
+    }
+    return bestAlong;
+}
+
+// Smooth fall-off from 1 at `full` to 0 at `none` (smoothstep), 1 below `full`.
+double fade(double gap, double full, double none)
+{
+    if (gap <= full) {
+        return 1.0;
+    }
+    if (gap >= none || !(none > full)) {
+        return 0.0;
+    }
+    const double x = (gap - full) / (none - full);
+    return 1.0 - x * x * (3.0 - 2.0 * x);
+}
+
+// A capsule's surface can bulge past its radius (breasts, belly, clothing):
+// regions are only skipped when their capsule is this much beyond range.
+constexpr double kCapsuleMarginM = 0.06;
+
+} // namespace
+
 SnapResult snapOffsetToSurface(math::Vec3 offsetM, math::Vec3 inwardDirection,
                                std::span<const math::Vec3> surfacePointsM,
                                const SnapSettings& settings)
@@ -150,45 +214,58 @@ SnapResult snapOffsetToSurface(math::Vec3 offsetM, math::Vec3 inwardDirection,
         return result;
     }
     const math::Vec3 d = inwardDirection / length;
-    // Pass 1: how far along the line the nearest surface lies.
-    double nearestAlong = std::numeric_limits<double>::infinity();
-    for (const math::Vec3& q : surfacePointsM) {
-        if (!isFinite(q)) {
-            continue;
-        }
-        const math::Vec3 w = q - offsetM;
-        const double along = math::dot(w, d);
-        if (math::length(w - along * d) <= settings.snapRadiusM &&
-            std::abs(along) <= settings.maxSnapDistanceM) {
-            nearestAlong = std::min(nearestAlong, std::abs(along));
-        }
-    }
-    if (!std::isfinite(nearestAlong)) {
+    const auto along = nearestLayerAlong(offsetM, d, surfacePointsM, settings.snapRadiusM,
+                                         settings.maxSnapDistanceM);
+    if (!along) {
         return result; // no surface near the line
     }
-    // Pass 2: within that surface layer, the point closest to the line, so a
-    // point at the edge of the search tube cannot pull the marker sideways or
-    // short of a curved surface.
-    double bestFromLine = std::numeric_limits<double>::infinity();
-    double bestAlong = 0.0;
-    for (const math::Vec3& q : surfacePointsM) {
-        if (!isFinite(q)) {
-            continue;
-        }
-        const math::Vec3 w = q - offsetM;
-        const double along = math::dot(w, d);
-        const double fromLine = math::length(w - along * d);
-        if (fromLine <= settings.snapRadiusM && std::abs(along) <= nearestAlong + kSheetM &&
-            fromLine < bestFromLine) { // strict: ties keep the earlier point
-            bestFromLine = fromLine;
-            bestAlong = along;
-        }
-    }
     // Move along the line only: the marker keeps its place across the surface.
-    result.offsetM = offsetM + (bestAlong - settings.contactOffsetM) * d;
+    result.offsetM = offsetM + (*along - settings.contactOffsetM) * d;
     result.snapped = true;
     result.movedM = math::distance(result.offsetM, offsetM);
     return result;
 }
 
+std::optional<ContactCorrection> contactCorrection(math::Vec3 limbEndM,
+                                                   std::span<const SurfaceRegion> regions,
+                                                   const ContactSettings& settings)
+{
+    if (!isFinite(limbEndM)) {
+        return std::nullopt;
+    }
+    // How far along the line a surface may be and still matter.
+    const double maxAlong = settings.noneBeyondM + settings.contactOffsetM;
+    std::optional<ContactCorrection> best;
+    for (std::size_t r = 0; r < regions.size(); ++r) {
+        const SurfaceRegion& region = regions[r];
+        const math::Vec3 ab = region.axisEndM - region.axisStartM;
+        const double len2 = math::lengthSquared(ab);
+        const double t =
+            len2 > 0.0 ? std::clamp(math::dot(limbEndM - region.axisStartM, ab) / len2, 0.0, 1.0)
+                       : 0.0;
+        const math::Vec3 toAxis = region.axisStartM + t * ab - limbEndM;
+        const double axisDistance = math::length(toAxis);
+        if (!(axisDistance > 0.0) ||
+            axisDistance - region.radiusM > settings.noneBeyondM + kCapsuleMarginM) {
+            continue; // on the axis (no direction) or clearly out of range
+        }
+        const math::Vec3 d = toAxis / axisDistance;
+        const auto gap =
+            nearestLayerAlong(limbEndM, d, region.pointsM, settings.snapRadiusM, maxAlong);
+        if (!gap || *gap >= settings.noneBeyondM) {
+            continue;
+        }
+        // The nearest surface wins; inside (negative) is nearest of all.
+        if (!best || *gap < best->gapM) {
+            ContactCorrection c;
+            c.region = r;
+            c.gapM = *gap;
+            c.inwardDirection = d;
+            c.weight = fade(*gap, settings.fullWithinM, settings.noneBeyondM);
+            c.targetM = limbEndM + c.weight * (*gap - settings.contactOffsetM) * d;
+            best = c;
+        }
+    }
+    return best;
+}
 } // namespace opas::markers

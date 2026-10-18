@@ -11,6 +11,7 @@
 #include "opas/math/Vec3.hpp"
 
 #include <array>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -80,5 +81,46 @@ struct SnapResult {
 SnapResult snapOffsetToSurface(math::Vec3 offsetM, math::Vec3 inwardDirection,
                                std::span<const math::Vec3> surfacePointsM,
                                const SnapSettings& settings = {});
+
+// --- A7 v2: per-frame contact correction (spec section "A7 v2") -------------
+
+// One region of the partner's body this frame, in world meters: its capsule
+// axis and radius, and its surface points (moved with their bones).
+struct SurfaceRegion {
+    std::string region;
+    math::Vec3 axisStartM;
+    math::Vec3 axisEndM;
+    double radiusM = 0.0;
+    std::vector<math::Vec3> pointsM;
+};
+
+struct ContactSettings {
+    // A7 v2 decision 3 (toddhow, 2026-10-18): full correction within 4 cm of the
+    // surface, none from 10 cm.
+    double fullWithinM = 0.04;
+    double noneBeyondM = 0.10;
+    // As SnapSettings: the hand bone sits this far inside the palm, and surface
+    // points this close to the line count.
+    double contactOffsetM = 0.02;
+    double snapRadiusM = 0.03;
+};
+
+struct ContactCorrection {
+    std::size_t region = 0;     // index into the regions passed in
+    double gapM = 0.0;          // signed distance to the surface along the direction; < 0 inside
+    double weight = 0.0;        // 1 within fullWithinM (and inside), 0 at noneBeyondM
+    math::Vec3 inwardDirection; // unit, from the limb end toward the region's axis
+    math::Vec3 targetM;         // limb end + weight * (gap - contactOffset) * direction
+};
+
+// A7 v2: for a limb end at `limbEndM` (its animated position this frame),
+// the region whose surface is nearest along the direction to that region's
+// axis (inside the body counts as nearest), and the depth-corrected target.
+// Regions whose capsule is clearly beyond noneBeyondM, or with no surface on
+// the line, are skipped. nullopt when no region is within noneBeyondM.
+// Deterministic; never throws.
+std::optional<ContactCorrection> contactCorrection(math::Vec3 limbEndM,
+                                                   std::span<const SurfaceRegion> regions,
+                                                   const ContactSettings& settings = {});
 
 } // namespace opas::markers
