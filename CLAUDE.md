@@ -264,6 +264,11 @@ After M1, a side track builds actor alignment for paired animations in Skyrim: t
 - [ ] In-game marker editor: capture, adjust, validate and save markers while a scene plays
 - [ ] Community presets: a manifest format with licenses and priorities, installable as separate mods
 
+### A7 Automatic marker placement (both repositories; spec `docs/tasks/0011`)
+
+- [ ] Markers authored automatically from a short silent recording when a scene node has none
+- [ ] Every marker adapts to the touched actor's real surface (skin or clothing) before IK uses it
+
 ## Path to OpenMW
 
 After M6, work moves into OpenMW in milestones that mirror the phases in OpenMW Animation System — Implementation Doc. None of them are active yet: each gets a full task spec with acceptance criteria before work starts.
@@ -352,6 +357,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-18 | A7 automatic marker placement added (toddhow approved the spec); lighter workflow continues |
 | 2026-10-17 | A5 (body surfaces, fingers) and A6 (marker editor, presets) scheduled after A4 (toddhow); specs drafted |
 | 2026-10-17 | Workflow: test-writer subagent paused and reviews once per milestone for A4 to A6, to save tokens (toddhow) |
 | 2026-10-17 | Design docs stay local: git-ignored in both repositories (none was ever committed) |
