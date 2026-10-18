@@ -14,7 +14,7 @@ Constraints: as A4 to A6. Auto files are game-derived only in the sense of posit
 ## A7b Adapting a marker to the real surface (main repository)
 toddhow's surface-binding idea, topology-free version (works for any body mod; binding to mesh triangles of a known body is a later step).
 1. **Input:** the marker's offset `p` and inward `contactDirection` `d`, both in the target region bone's frame, and surface points of that region in the same frame (from A5b sampling, stored relative to their bone so they follow the animation).
-2. **Snap:** among surface points within `snapRadiusM` of the line `p + s·d` (proposal: 3 cm), take the one nearest to `p` along the line. The new offset is that point moved back along `-d` by `contactOffsetM` (proposal: 2 cm, roughly half a hand's thickness, since the hand bone sits inside the palm).
+2. **Snap:** surface points within `snapRadiusM` (3 cm) of the line `p + s·d` count. Find the nearest surface layer along the line (smallest `|s|`, plus 1 cm of depth), and in it the point closest to the line; move `p` along the line only, to that point's `s` minus `contactOffsetM` (2 cm, roughly half a hand's thickness, since the hand bone sits inside the palm). Refined while implementing (2026-10-18): taking simply the nearest point along the line let points at the edge of the tube pull the marker sideways or short of a curved surface (caught by the cylinder test).
 3. **No surface near the line:** the offset is unchanged and the result says so.
 
 ## A7c In game (plugin)

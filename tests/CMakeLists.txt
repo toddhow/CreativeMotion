@@ -9,6 +9,7 @@ add_executable(opas_tests
   unit/kinematic_ik/TwoBoneIkTest.cpp
   unit/kinematic_ik/FingerCurlTest.cpp
   unit/kinematic_markers/CapsuleFitTest.cpp
+  unit/kinematic_markers/AutoMarkersTest.cpp
   unit/kinematic_markers/AlignmentScenesTest.cpp
   unit/kinematic_markers/AlignmentTest.cpp
   unit/kinematic_markers/BodyMapLoadTest.cpp
