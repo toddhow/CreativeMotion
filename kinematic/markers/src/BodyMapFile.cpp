@@ -16,7 +16,9 @@ using detail::number;
 using detail::vec3;
 
 constexpr std::string_view kFormatName = "opas.bodymap";
-constexpr int kFormatVersion = 1;
+// Version 1: limbs, capsules, IK chains. Version 2 adds "fingers" (A5c).
+constexpr int kVersionWithoutFingers = 1;
+constexpr int kVersionWithFingers = 2;
 
 // The body-map rules (docs/formats/bodymap.md) on top of the shared reader.
 // Within each object, unknown keys are checked first, then fields in the
@@ -149,6 +151,63 @@ public:
         return true;
     }
 
+    bool readFinger(const Json& value, const std::string& pointer, FingerDefinition& out,
+                    const std::set<std::string>& chainNames)
+    {
+        if (!value.is_object()) {
+            return fail(value, pointer, "must be a finger object");
+        }
+        if (!onlyKeys(value, pointer, {"name", "chain", "bones", "hingeAxis", "maxCurlRad"})) {
+            return false;
+        }
+        if (!stringField(value, pointer, "name", out.name) ||
+            !stringField(value, pointer, "chain", out.chain)) {
+            return false;
+        }
+        if (!chainNames.contains(out.chain)) {
+            return fail(value.at("chain"), pointer + "/chain", "must name an IK chain of this map");
+        }
+        const Json* bones = member(value, pointer, "bones");
+        if (bones == nullptr) {
+            return false;
+        }
+        if (!bones->is_array() || bones->size() < 2) {
+            return fail(*bones, pointer + "/bones", "must be an array of at least 2 bone names");
+        }
+        out.bones.resize(bones->size());
+        for (std::size_t i = 0; i < bones->size(); ++i) {
+            if (!readString((*bones)[i], pointer + "/bones/" + std::to_string(i), out.bones[i])) {
+                return false;
+            }
+        }
+        const Json* axis = member(value, pointer, "hingeAxis");
+        if (axis == nullptr || !readVec3(*axis, pointer + "/hingeAxis", out.hingeAxis)) {
+            return false;
+        }
+        if (math::lengthSquared(out.hingeAxis) == 0.0) {
+            return fail(*axis, pointer + "/hingeAxis", "must not be the zero vector");
+        }
+        const Json* curls = member(value, pointer, "maxCurlRad");
+        if (curls == nullptr) {
+            return false;
+        }
+        if (!curls->is_array() || curls->size() != out.bones.size()) {
+            return fail(*curls, pointer + "/maxCurlRad",
+                        "must be an array with one number per bone");
+        }
+        out.maxCurlRad.resize(curls->size());
+        for (std::size_t i = 0; i < curls->size(); ++i) {
+            const std::string at = pointer + "/maxCurlRad/" + std::to_string(i);
+            if (!readNumber((*curls)[i], at, out.maxCurlRad[i])) {
+                return false;
+            }
+            if (!(out.maxCurlRad[i] >= 0.0 && out.maxCurlRad[i] <= std::numbers::pi)) {
+                return fail((*curls)[i], at, "must be in [0, pi]");
+            }
+        }
+        return true;
+    }
+
     // Reads a required top-level array and each element with `readItem`.
     template <typename Item, typename ReadItem>
     bool readArray(const Json& root, std::string_view key, std::vector<Item>& out,
@@ -191,7 +250,8 @@ public:
         if (!root.is_object()) {
             return fail(root, "", "the document must be a JSON object");
         }
-        if (!onlyKeys(root, "", {"format", "version", "limbs", "capsules", "ikChains"})) {
+        if (!onlyKeys(root, "",
+                      {"format", "version", "limbs", "capsules", "ikChains", "fingers"})) {
             return false;
         }
         const Json* format = member(root, "", "format");
@@ -205,8 +265,13 @@ public:
         if (version == nullptr) {
             return false;
         }
-        if (!version->is_number_integer() || version->get<std::int64_t>() != kFormatVersion) {
-            return fail(*version, "/version", "unsupported version (expected 1)");
+        const std::int64_t v = version->is_number_integer() ? version->get<std::int64_t>() : -1;
+        if (v != kVersionWithoutFingers && v != kVersionWithFingers) {
+            return fail(*version, "/version", "unsupported version (expected 1 or 2)");
+        }
+        // Version 1 has no fingers; version 2 requires the array.
+        if (v == kVersionWithoutFingers && root.contains("fingers")) {
+            return fail(root.at("fingers"), "/fingers", "needs version 2");
         }
 
         std::set<std::string> limbNames;
@@ -226,9 +291,15 @@ public:
                    firstOccurrence(chainNames, o.name, v, p, "name", "chain name") &&
                    firstOccurrence(chainEnds, o.endBone, v, p, "endBone", "chain endBone");
         };
+        std::set<std::string> fingerNames;
+        const auto finger = [&](const Json& f, const std::string& p, FingerDefinition& o) {
+            return readFinger(f, p, o, chainNames) &&
+                   firstOccurrence(fingerNames, o.name, f, p, "name", "finger name");
+        };
         return readArray(root, "limbs", out.limbs, limb) &&
                readArray(root, "capsules", out.capsules, capsule) &&
-               readArray(root, "ikChains", out.ikChains, chain);
+               readArray(root, "ikChains", out.ikChains, chain) &&
+               (v == kVersionWithoutFingers || readArray(root, "fingers", out.fingers, finger));
     }
 };
 
@@ -290,7 +361,8 @@ BodyMapLoadResult loadBodyMapFile(const std::filesystem::path& path)
 std::string writeBodyMap(const BodyMapping& mapping)
 {
     std::string out =
-        "{\n  \"format\": \"opas.bodymap\",\n  \"version\": " + std::to_string(kFormatVersion) +
+        "{\n  \"format\": \"opas.bodymap\",\n  \"version\": " +
+        std::to_string(mapping.fingers.empty() ? kVersionWithoutFingers : kVersionWithFingers) +
         ",\n";
     out += "  \"limbs\": " +
            arrayBlock(mapping.limbs,
@@ -308,20 +380,31 @@ std::string writeBodyMap(const BodyMapping& mapping)
                                  ", \"radiusRatio\": " + number(c.radiusRatio) + "}";
                       }) +
            ",\n";
-    out += "  \"ikChains\": " +
-           arrayBlock(mapping.ikChains,
-                      [](const IkChain& c) {
-                          return "    {\n      \"name\": " + jsonString(c.name) +
-                                 ",\n      \"rootBone\": " + jsonString(c.rootBone) +
-                                 ",\n      \"midBone\": " + jsonString(c.midBone) +
-                                 ",\n      \"endBone\": " + jsonString(c.endBone) +
-                                 ",\n      \"minBendRad\": " + number(c.limits.minBendRad) +
-                                 ",\n      \"maxBendRad\": " + number(c.limits.maxBendRad) +
-                                 ",\n      \"poleDirection\": " + vec3(c.poleDirection) +
-                                 ",\n      \"limbRadiusM\": " + number(c.limbRadiusM) + "\n    }";
-                      }) +
-           "\n";
-    out += "}\n";
+    out += "  \"ikChains\": " + arrayBlock(mapping.ikChains, [](const IkChain& c) {
+               return "    {\n      \"name\": " + jsonString(c.name) +
+                      ",\n      \"rootBone\": " + jsonString(c.rootBone) +
+                      ",\n      \"midBone\": " + jsonString(c.midBone) +
+                      ",\n      \"endBone\": " + jsonString(c.endBone) +
+                      ",\n      \"minBendRad\": " + number(c.limits.minBendRad) +
+                      ",\n      \"maxBendRad\": " + number(c.limits.maxBendRad) +
+                      ",\n      \"poleDirection\": " + vec3(c.poleDirection) +
+                      ",\n      \"limbRadiusM\": " + number(c.limbRadiusM) + "\n    }";
+           });
+    if (!mapping.fingers.empty()) {
+        out += ",\n  \"fingers\": " + arrayBlock(mapping.fingers, [](const FingerDefinition& f) {
+                   std::string curls = "[";
+                   for (std::size_t i = 0; i < f.maxCurlRad.size(); ++i) {
+                       curls += (i > 0 ? ", " : "") + number(f.maxCurlRad[i]);
+                   }
+                   curls += ']';
+                   return "    {\n      \"name\": " + jsonString(f.name) +
+                          ",\n      \"chain\": " + jsonString(f.chain) +
+                          ",\n      \"bones\": " + stringArray(f.bones) +
+                          ",\n      \"hingeAxis\": " + vec3(f.hingeAxis) +
+                          ",\n      \"maxCurlRad\": " + curls + "\n    }";
+               });
+    }
+    out += "\n}\n";
     return out;
 }
 

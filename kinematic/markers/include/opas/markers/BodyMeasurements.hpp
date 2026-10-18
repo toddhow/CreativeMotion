@@ -50,10 +50,22 @@ struct IkChain {
     double limbRadiusM = 0.04; // limb thickness for penetration tests, > 0
 };
 
+// A finger for finger contact (A5c, docs/tasks/0009): its joints from the
+// knuckle outward, the IK chain whose end bone is its hand, the axis each
+// joint bends about in that joint's own frame, and each joint's curl limit.
+struct FingerDefinition {
+    std::string name;
+    std::string chain;                   // an IkChain::name in the same map
+    std::vector<std::string> bones;      // >= 2, knuckle first
+    math::Vec3 hingeAxis{0.0, 0.0, 1.0}; // in each joint's local frame; not zero
+    std::vector<double> maxCurlRad;      // one per bone, each in [0, pi]
+};
+
 struct BodyMapping {
     std::vector<LimbDefinition> limbs;
     std::vector<CapsuleRule> capsules;
     std::vector<IkChain> ikChains;
+    std::vector<FingerDefinition> fingers; // body map format version 2 only
 };
 
 struct LimbLength {

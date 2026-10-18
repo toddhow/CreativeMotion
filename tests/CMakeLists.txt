@@ -7,6 +7,8 @@ add_executable(opas_tests
   unit/core_math/Vec3Test.cpp
   unit/core_rig/SkeletonTest.cpp
   unit/kinematic_ik/TwoBoneIkTest.cpp
+  unit/kinematic_ik/FingerCurlTest.cpp
+  unit/kinematic_markers/CapsuleFitTest.cpp
   unit/kinematic_markers/AlignmentScenesTest.cpp
   unit/kinematic_markers/AlignmentTest.cpp
   unit/kinematic_markers/BodyMapLoadTest.cpp
@@ -34,6 +36,7 @@ add_executable(opas_tests
   property/kinematic_ik/TwoBoneIkPropertyTest.cpp
   roundtrip/kinematic_markers/BodyMapHumanoidRoundTripTest.cpp
   roundtrip/kinematic_markers/BodyMapRoundTripTest.cpp
+  roundtrip/kinematic_markers/BodyMapFingersTest.cpp
   roundtrip/kinematic_markers/MarkerRoundTripTest.cpp
   roundtrip/kinematic_markers/NegativeZeroRoundTripTest.cpp
   roundtrip/kinematic_markers/PoseClipRoundTripTest.cpp

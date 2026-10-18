@@ -200,7 +200,8 @@ TEST(BodyMapLoadErrors, WrongFormatAndVersion)
         {"\"opas.bodymap\"", "\"opas.markers\"", 2, "/format"},
         {"\"opas.bodymap\"", "\"\"", 2, "/format"},
         {"\"format\": \"opas.bodymap\"", "\"format\": 1", 2, "/format"},
-        {"\"version\": 1,", "\"version\": 2,", 3, "/version"},
+        // Version 2 (fingers) is valid since A5c (toddhow approved, 2026-10-17); 3 is not.
+        {"\"version\": 1,", "\"version\": 3,", 3, "/version"},
         {"\"version\": 1,", "\"version\": 0,", 3, "/version"},
         {"\"version\": 1,", "\"version\": \"1\",", 3, "/version"},
         {"\"version\": 1,", "\"version\": 1.5,", 3, "/version"},

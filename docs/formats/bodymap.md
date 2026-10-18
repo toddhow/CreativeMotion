@@ -34,7 +34,7 @@ Describe which bones of a skeleton form limbs, body capsules (regions) and IK ch
 | Field | Type | Rule |
 | --- | --- | --- |
 | `format` | string | exactly `"opas.bodymap"` |
-| `version` | integer | exactly `1` |
+| `version` | integer | `1`, or `2` when the file has `fingers` (A5c) |
 | `limbs`, `capsules`, `ikChains` | arrays | required; may be empty |
 | limb `name` | string | non-empty, unique among limbs |
 | limb `bones` | array of strings | at least 2, each non-empty; proximal to distal |
@@ -46,6 +46,12 @@ Describe which bones of a skeleton form limbs, body capsules (regions) and IK ch
 | chain `minBendRad`, `maxBendRad` | number | `0 <= minBendRad <= maxBendRad <= pi` |
 | chain `poleDirection` | array of 3 numbers | finite, not all zero; in the actor's root frame |
 | chain `limbRadiusM` | number | `> 0`, meters |
+| `fingers` | array | version 2 only, and then required |
+| finger `name` | string | non-empty, unique among fingers |
+| finger `chain` | string | the `name` of an IK chain in this file (the chain whose `endBone` is the finger's hand) |
+| finger `bones` | array of strings | at least 2, knuckle first |
+| finger `hingeAxis` | array of 3 numbers | not all zero; the axis each joint bends about, in that joint's own frame |
+| finger `maxCurlRad` | array of numbers | one per bone, each in `[0, pi]` |
 
 All fields are required; unknown keys are errors; numbers must be finite. Whether the named bones exist, and whether each chain's mid bone is below its root bone and its end bone below its mid bone (at any depth), is checked when the map is used with a skeleton (`measureBody`, `alignPair`), not here.
 
@@ -55,4 +61,4 @@ Same rules as marker files (`docs/formats/markers.md`): file name, 1-based line,
 
 ## Canonical form
 
-`writeBodyMap` output, which round-trips byte-for-byte: keys in the order above; 2-space indent; each limb and capsule object on one line; each IK chain object on multiple lines with one key per line; arrays of strings or numbers on one line; numbers in shortest round-trip form; LF line endings; a trailing newline. An empty array is written `[]`.
+`writeBodyMap` output, which round-trips byte-for-byte: keys in the order above; 2-space indent; each limb and capsule object on one line; each IK chain object on multiple lines with one key per line; arrays of strings or numbers on one line; numbers in shortest round-trip form; LF line endings; a trailing newline. An empty array is written `[]`. `fingers` comes last, each finger on multiple lines like a chain; a map without fingers is written as version 1 and one with fingers as version 2, so a version 2 file with an empty `fingers` array loads but is not canonical.

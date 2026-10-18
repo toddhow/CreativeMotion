@@ -18,3 +18,5 @@ Depends on `core/math`, `core/rig`, `kinematic/ik` (alignment) and, privately, n
 - When a host project already provides `nlohmann_json`, CreativeMotion uses it instead of fetching its own. That host build must enable `JSON_Diagnostic_Positions`, or loader errors lose their line numbers.
 - Pose clips (`docs/formats/poseclip.md`) and detection profiles (`docs/formats/detection.md`) use the same JSON support. Contact detection (`ContactDetection.cpp`) follows the numbered rules in `docs/tasks/0006`; keep the two in step.
 - The validation pass (`Validation.cpp`, tool `tools/validate_markers`) does root alignment only on a flat skeleton built from a clip frame; IK chains are removed (A4c extends it). Rules: `docs/tasks/0007`.
+- Capsule fit (`CapsuleFit.cpp`, A5a) returns a copy of the body map with fitted `radiusRatio` values, so the solver needs no API change. It uses the nearest-rank percentile with `std::nth_element`.
+- Body map version 2 adds `fingers`. The writer writes version 1 when there are no fingers, so v1 files keep round-tripping; a v2 file with an empty `fingers` array loads but is not canonical.

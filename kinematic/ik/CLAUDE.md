@@ -9,3 +9,4 @@ Depends only on `core/math` (and later `core/rig`). No physics, game or framewor
 ## Pitfalls
 - Precision near a straight limb: derive angles with `atan2` from the solved bend, not `sqrt(1 - cos²)`. The latter put the mid joint 7e-8 rad off a straight line and failed the joint-limit property test.
 - Bend 0 means straight. Reach decreases as bend increases, so `minBendRad` sets the maximum reach.
+- Finger curl (`FingerCurl.cpp`, A5c) scans for the first touch, then bisects. The scan step count is sized so the tip moves at most half the target's radius per step (capped at 4096); with a fixed 32 steps, the tip stepped over thin targets. It allocates small vectors, an exception to the no-allocation rule that is accepted under A4-A6 (toddhow), like `alignPair`.
