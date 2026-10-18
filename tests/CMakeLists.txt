@@ -37,6 +37,7 @@ add_executable(opas_tests
   roundtrip/kinematic_markers/BodyMapHumanoidRoundTripTest.cpp
   roundtrip/kinematic_markers/BodyMapRoundTripTest.cpp
   roundtrip/kinematic_markers/BodyMapFingersTest.cpp
+  roundtrip/kinematic_markers/PresetFileTest.cpp
   roundtrip/kinematic_markers/MarkerRoundTripTest.cpp
   roundtrip/kinematic_markers/NegativeZeroRoundTripTest.cpp
   roundtrip/kinematic_markers/PoseClipRoundTripTest.cpp

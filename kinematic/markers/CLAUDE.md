@@ -20,3 +20,4 @@ Depends on `core/math`, `core/rig`, `kinematic/ik` (alignment) and, privately, n
 - The validation pass (`Validation.cpp`, tool `tools/validate_markers`) does root alignment only on a flat skeleton built from a clip frame; IK chains are removed (A4c extends it). Rules: `docs/tasks/0007`.
 - Capsule fit (`CapsuleFit.cpp`, A5a) returns a copy of the body map with fitted `radiusRatio` values, so the solver needs no API change. It uses the nearest-rank percentile with `std::nth_element`.
 - Body map version 2 adds `fingers`. The writer writes version 1 when there are no fingers, so v1 files keep round-tripping; a v2 file with an empty `fingers` array loads but is not canonical.
+- Preset manifests (`PresetFile.cpp`, `docs/formats/preset.md`, A6b): the JSON key `requires` is a C++20 keyword, so the member is `requirements`. `chooseMarkerSource` picks whole files: the user's own file, then the highest priority, then the smallest name.
