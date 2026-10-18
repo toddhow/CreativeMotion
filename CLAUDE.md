@@ -124,6 +124,8 @@ Every change follows the same loop, with tests written independently of the impl
 5. **Verify:** all quality gates pass in CI; behavior changes include a sandbox replay and, once the viewer exists, a short recording for toddhow to judge the look.
 6. **Explain and merge:** the pull request explains the change in plain language for toddhow, who approves the merge.
 
+**Lighter loop for A4 to A6 (toddhow, 2026-10-17, to save tokens):** steps 2 and 4 are paused. No separate test-writing subagent: the implementing agent writes focused tests itself where they are cheap (core math, formats), and a fresh reviewing subagent runs once per milestone, not per change. toddhow still approves each spec before implementation and judges in-game behaviour. The full loop returns when toddhow says so.
+
 Rules for every session:
 
 - One task per branch; small pull requests.
@@ -342,6 +344,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-17 | Workflow: test-writer subagent paused and reviews once per milestone for A4 to A6, to save tokens (toddhow) |
 | 2026-10-17 | Design docs stay local: git-ignored in both repositories (none was ever committed) |
 | 2026-10-17 | A4: second framework adapter (SexLab P+) deferred; A4 completes without it |
 | 2026-10-16 | A3 design approved: root alignment through OStim's alignment API, poses sampled per node; the per-frame pose hook moves to A4; body maps become a JSON format (A3a) |
