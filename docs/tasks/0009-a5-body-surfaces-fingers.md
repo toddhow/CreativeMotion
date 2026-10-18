@@ -43,3 +43,9 @@ Rules:
 4. **Body map format v2** with an optional `fingers` section (proposal).
 
 Out of scope: per-vertex contact (surfaces stay capsules), feet and toes, deforming the mesh.
+
+## In-game findings (toddhow's logs, 2026-10-17)
+- Skinned `BSTriShape`s report 0 vertices in the shape itself; their vertices are in the skin partition (`NiSkinPartition::vertexCount`, `NiSkinPartition.h:84`), which is what is counted now.
+- Head, face, hair, brows, mouth and eyes are `BSDynamicTriShape`s whose partition layout has no position (flags 0x442: full precision, skinned, UV; no `VF_VERTEX`). They cannot be sampled and are skipped.
+- The body on toddhow's setup is `3BA`, skinned to 48 bones; RaceMenu adds copies named `Body [ovl0]` to `Body [SOvl0]`, and worn clothing (`robes`) is also skinned to the spine.
+- **A5b rule 1, refined** (same intent as decision 2, "armour on top is ignored"): among skinned shapes with sampleable positions and the spine bone, take the one skinned to the most of the body map's capsule bones, then the most vertices, then a non-overlay.
