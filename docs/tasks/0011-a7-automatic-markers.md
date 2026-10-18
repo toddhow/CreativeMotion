@@ -43,3 +43,15 @@ Out of scope: an ML model (only if rules plus snapping fall short), binding mark
 - One contact per limb end: with the 8 cm auto distance a hand can be near several regions at once; the best fit wins (tier, then distance, then duration); the others are reported as shadowed.
 - Snapping ignores surface more than 12 cm along the line, so a missing front layer cannot pull a marker through the body.
 - In game: snapping uses every sampled surface point within the region's capsule radius plus a margin (not only points weighted to the region's start bone, which missed breasts and clavicles); it skips markers from the user's own file and markers being edited, so hand fixes are not undone (rule 5); body samples are cached per scene node; a queued length-limit stop only stops the recording it was queued for.
+
+## A7 v2: per-frame contact correction (toddhow, 2026-10-18)
+In game, pinned automatic markers made scenes worse: each marker is one fixed point (the recording's mean), active for the whole node because OStim has no animation time, so the IK dragged limbs to it whatever the animation did, and root alignment shifted the actors to match. toddhow's goal is to adapt the animation at runtime, not to pin bones. Decisions (all approved 2026-10-18):
+1. **Per-frame correction:** every frame, each hand and foot keeps the position the animation gives it; only its depth against the partner's real surface (A5b samples, moving with their bones) is corrected, along the direction to the body. Sliding across the body stays as animated.
+2. **Any near pair:** every hand and foot against any of the partner's regions, whenever the animation brings it close. No marker file is needed. A user or preset marker file still pins the limb ends it names (authored positions win).
+3. **Range:** full correction when the animated hand is within 4 cm of the surface, fading to none at 10 cm; a hand inside the body is always pushed out. The hand ends 2 cm outside the surface (the contact offset).
+4. **Root alignment:** only from the user's own or preset marker files; automatic contacts never move the actors.
+Consequences: automatic pinned markers (A7a, A7c rules 1 to 3) are off by default (`bAutoMarkers=0`) and their files are not used as positions; the authoring code stays for later use (e.g. finding pairs). Rules for the correction itself:
+- **Nearest region:** for each limb end, the partner region whose surface is nearest along the direction from the limb end to that region's axis; regions whose capsule is farther than the fade distance are skipped first.
+- **Gap:** the signed distance along that direction to the nearest surface layer (A7b's layer rule); negative inside the body.
+- **Target:** limb end + weight x (gap - contact offset) along the direction, with weight 1 up to 4 cm (and inside), falling smoothly to 0 at 10 cm.
+- **Solving:** each target becomes a per-frame marker for the IK (roots fixed), so joint limits, poles and penetration avoidance still apply. At weight 0 the target equals the animated position, so contacts fade in and out without popping.

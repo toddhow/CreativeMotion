@@ -266,8 +266,8 @@ After M1, a side track builds actor alignment for paired animations in Skyrim: t
 
 ### A7 Automatic marker placement (both repositories; spec `docs/tasks/0011`)
 
-- [ ] Markers authored automatically from a short silent recording when a scene node has none
-- [ ] Every marker adapts to the touched actor's real surface (skin or clothing) before IK uses it
+- [ ] Every frame, hands and feet near the partner keep their animated motion and only their depth is corrected against the partner's real surface (A7 v2, toddhow 2026-10-18; pinned automatic markers are off)
+- [ ] Authored (user or preset) markers adapt to the touched actor's real surface before IK uses it
 
 ## Path to OpenMW
 
@@ -357,6 +357,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-18 | A7 v2: per-frame contact correction replaces pinned automatic markers; root alignment only from user or preset files (toddhow) |
 | 2026-10-18 | A7 automatic marker placement added (toddhow approved the spec); lighter workflow continues |
 | 2026-10-17 | A5 (body surfaces, fingers) and A6 (marker editor, presets) scheduled after A4 (toddhow); specs drafted |
 | 2026-10-17 | Workflow: test-writer subagent paused and reviews once per milestone for A4 to A6, to save tokens (toddhow) |
