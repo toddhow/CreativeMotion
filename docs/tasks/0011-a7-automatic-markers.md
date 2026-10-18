@@ -37,3 +37,9 @@ toddhow's surface-binding idea, topology-free version (works for any body mod; b
 4. **Milestone:** call this A7 in CLAUDE.md, after A6 (proposal).
 
 Out of scope: an ML model (only if rules plus snapping fall short), binding markers to mesh triangles of known bodies (later), animation-time-aware windows (no time source in OStim).
+
+## Milestone review fixes (2026-10-18)
+- Validation checks each candidate in the middle of its own contact run (validation evaluates a marker at `round(startS·rate)`); checking every candidate at frame 0 dropped contacts that start late or drift.
+- One contact per limb end: with the 8 cm auto distance a hand can be near several regions at once; the best fit wins (tier, then distance, then duration); the others are reported as shadowed.
+- Snapping ignores surface more than 12 cm along the line, so a missing front layer cannot pull a marker through the body.
+- In game: snapping uses every sampled surface point within the region's capsule radius plus a margin (not only points weighted to the region's start bone, which missed breasts and clavicles); it skips markers from the user's own file and markers being edited, so hand fixes are not undone (rule 5); body samples are cached per scene node; a queued length-limit stop only stops the recording it was queued for.

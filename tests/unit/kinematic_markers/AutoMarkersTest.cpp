@@ -49,11 +49,14 @@ PoseClip clip(HandAt hand)
     c.sampleRateHz = kRateHz;
     for (auto& a : c.actors) {
         a.bodyMap = "humanoid";
-        a.bones = {"ChestA", "ChestB", "Hand", "Shoulder"};
+        a.bones = {"BellyA", "BellyB", "ChestA", "ChestB", "Hand", "Shoulder"};
     }
     for (int f = 0; f < kFrames; ++f) {
-        c.actors[0].frames.push_back({at(0, 0, 1), at(0, 0, 1.4), hand(f), at(0.5, 0, 1.3)});
-        c.actors[1].frames.push_back({at(1, 0, 1), at(1, 0, 1.4), at(5, 5, 1.2), at(5, 5, 1.3)});
+        c.actors[0].frames.push_back(
+            {at(0, 0, 0.8), at(0, 0, 1), at(0, 0, 1), at(0, 0, 1.4), hand(f), at(0.5, 0, 1.3)});
+        // Actor 1's belly sits just below its chest (z 0.8 to 1).
+        c.actors[1].frames.push_back(
+            {at(1, 0, 0.8), at(1, 0, 1), at(1, 0, 1), at(1, 0, 1.4), at(5, 5, 1.2), at(5, 5, 1.3)});
     }
     return c;
 }
@@ -94,6 +97,41 @@ TEST(AutoAuthor, AContactForLessThanHalfTheClipIsDroppedAsIntermittent)
     ASSERT_FALSE(r.report.empty());
     EXPECT_FALSE(r.report[0].kept);
     EXPECT_NE(r.report[0].reason.find("intermittent"), std::string::npos);
+}
+
+TEST(AutoAuthor, AContactThatStartsLateIsStillKept)
+{
+    // Away for the first 20 frames, then on the chest for 40 (1.33 s of 2 s):
+    // validation must check it where it is in contact, not at frame 0.
+    const auto r = autoAuthorMarkers(
+        clip([](int f) { return f < 20 ? at(0.3, 0, 0.2) : at(0.88, 0, 1.2); }), {map(), map()});
+    ASSERT_TRUE(r.valid) << r.error;
+    ASSERT_EQ(r.markers.markers.size(), 1U);
+    EXPECT_EQ(r.markers.markers[0].window.startS, 0.0);
+}
+
+// The arm map plus a belly capsule (0.2 m long, radius 0.05) under the chest.
+BodyMapping mapWithBelly()
+{
+    BodyMapping m = map();
+    m.capsules.push_back(CapsuleRule{"Belly", "BellyA", "BellyB", 0.25});
+    return m;
+}
+
+TEST(AutoAuthor, AHandNearTwoRegionsKeepsOnlyTheClosest)
+{
+    // 2 cm from the chest surface, about 7 cm from the belly surface: both are
+    // within the auto distance, but only the chest is kept.
+    const auto r = autoAuthorMarkers(clip([](int) { return at(0.88, 0, 1.02); }),
+                                     {mapWithBelly(), mapWithBelly()});
+    ASSERT_TRUE(r.valid) << r.error;
+    ASSERT_EQ(r.markers.markers.size(), 1U);
+    EXPECT_EQ(r.markers.markers[0].targetRegion, "Chest");
+    bool shadowed = false;
+    for (const auto& entry : r.report) {
+        shadowed = shadowed || entry.reason.find("shadowed") != std::string::npos;
+    }
+    EXPECT_TRUE(shadowed);
 }
 
 TEST(AutoAuthor, ItIsDeterministic)
@@ -137,6 +175,21 @@ TEST(SurfaceSnap, AnOffsetInsideTheBodyMovesOutToTheNearestSurface)
     const auto r = snapOffsetToSurface(Vec3{0.05, 0, 0.5}, Vec3{-1, 0, 0}, cylinder());
     ASSERT_TRUE(r.snapped);
     EXPECT_NEAR(r.offsetM.x, 0.1 + 0.02, 0.001); // the near side, not the far one
+}
+
+TEST(SurfaceSnap, OnlyTheFarSideOfTheBodyIsTooFarToSnapTo)
+{
+    // Only the back half of the cylinder (x < 0) is present: it lies 30 cm
+    // along the line, beyond the 12 cm limit, so the offset stays.
+    std::vector<Vec3> back;
+    for (const Vec3& p : cylinder()) {
+        if (p.x < 0.0) {
+            back.push_back(p);
+        }
+    }
+    const auto r = snapOffsetToSurface(Vec3{0.2, 0, 0.5}, Vec3{-1, 0, 0}, back);
+    EXPECT_FALSE(r.snapped);
+    EXPECT_EQ(r.offsetM.x, 0.2);
 }
 
 TEST(SurfaceSnap, NoSurfaceNearTheLineLeavesTheOffsetUnchanged)

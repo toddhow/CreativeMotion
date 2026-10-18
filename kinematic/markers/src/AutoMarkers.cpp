@@ -36,10 +36,10 @@ AutoAuthorResult authorUnchecked(const PoseClip& clip, const std::array<BodyMapp
     const double clipS =
         clip.sampleRateHz > 0.0 ? static_cast<double>(clip.frameCount()) / clip.sampleRateHz : 0.0;
 
-    // Rule 2: steady contacts only; windows from 0 for the whole node.
-    MarkerSet candidates;
-    std::vector<std::size_t> reportIndex; // candidate -> its report entry
-    for (const DetectedContact& c : detected.contacts) {
+    // Rule 2: steady contacts only.
+    std::vector<std::size_t> steady; // indices into detected.contacts
+    for (std::size_t i = 0; i < detected.contacts.size(); ++i) {
+        const DetectedContact& c = detected.contacts[i];
         AutoContactReport entry;
         entry.id = "auto-" + c.marker.id;
         entry.confidence = c.confidence;
@@ -47,33 +47,77 @@ AutoAuthorResult authorUnchecked(const PoseClip& clip, const std::array<BodyMapp
         if (c.durationS < settings.minShareOfClip * clipS) {
             entry.reason = "intermittent: lasts less than the required share of the clip";
         } else {
-            InteractionMarker m = c.marker;
-            m.id = entry.id;
-            m.window = TimeWindow{0.0, settings.windowEndS};
-            candidates.markers.push_back(std::move(m));
-            reportIndex.push_back(result.report.size());
+            steady.push_back(i);
         }
         result.report.push_back(std::move(entry));
     }
 
-    // Rule 3: each candidate must pass validation at the bodies as recorded.
-    // Validation evaluates a marker at round(startS * rate) = frame 0 here.
-    if (!candidates.markers.empty()) {
+    // One contact per limb end (review, 2026-10-18): with the wide auto
+    // distance a hand can be near the chest, belly and an arm at once, and all
+    // of them would stay active for the whole node. The best fit wins: highest
+    // tier, then closest, then longest, then detection order.
+    const auto better = [&](std::size_t a, std::size_t b) {
+        const DetectedContact& x = detected.contacts[a];
+        const DetectedContact& y = detected.contacts[b];
+        if (x.confidence != y.confidence) {
+            return x.confidence > y.confidence;
+        }
+        if (x.meanDistanceM != y.meanDistanceM) {
+            return x.meanDistanceM < y.meanDistanceM;
+        }
+        if (x.durationS != y.durationS) {
+            return x.durationS > y.durationS;
+        }
+        return a < b;
+    };
+    std::vector<std::size_t> chosen;
+    for (const std::size_t i : steady) {
+        const InteractionMarker& m = detected.contacts[i].marker;
+        bool best = true;
+        for (const std::size_t j : steady) {
+            const InteractionMarker& o = detected.contacts[j].marker;
+            if (j != i && o.sourceActor == m.sourceActor && o.sourceBone == m.sourceBone &&
+                better(j, i)) {
+                best = false;
+                result.report[i].reason = "shadowed by " + result.report[j].id;
+                break;
+            }
+        }
+        if (best) {
+            chosen.push_back(i);
+        }
+    }
+
+    // Rule 3: each chosen contact must pass validation at the bodies as
+    // recorded, checked in the middle of its own run (where it is actually in
+    // contact, with the contacts active then), not at frame 0: validation
+    // evaluates a marker at round(startS * rate) (review, 2026-10-18).
+    if (!chosen.empty()) {
+        MarkerSet forValidation;
+        for (const std::size_t i : chosen) {
+            InteractionMarker m = detected.contacts[i].marker;
+            m.id = result.report[i].id;
+            m.window.startS = 0.5 * (m.window.startS + m.window.endS);
+            forValidation.markers.push_back(std::move(m));
+        }
         ValidationSettings asRecorded;
         asRecorded.scales = {1.0};
-        const ValidationReport report = validateMarkers(candidates, clip, bodyMaps, asRecorded);
+        const ValidationReport report = validateMarkers(forValidation, clip, bodyMaps, asRecorded);
         if (!report.valid) {
             result.error = "validation: " + report.error;
             return result;
         }
-        for (std::size_t i = 0; i < candidates.markers.size(); ++i) {
-            AutoContactReport& entry = result.report[reportIndex[i]];
-            if (report.markers[i].passed()) {
-                entry.kept = true;
-                result.markers.markers.push_back(candidates.markers[i]);
-            } else {
+        for (std::size_t k = 0; k < chosen.size(); ++k) {
+            AutoContactReport& entry = result.report[chosen[k]];
+            if (!report.markers[k].passed()) {
                 entry.reason = "not met at the recorded bodies";
+                continue;
             }
+            // Kept: active from 0 for the whole node (OStim has no animation time).
+            InteractionMarker m = forValidation.markers[k];
+            m.window = TimeWindow{0.0, settings.windowEndS};
+            result.markers.markers.push_back(std::move(m));
+            entry.kept = true;
         }
     }
     result.valid = true;
@@ -114,7 +158,8 @@ SnapResult snapOffsetToSurface(math::Vec3 offsetM, math::Vec3 inwardDirection,
         }
         const math::Vec3 w = q - offsetM;
         const double along = math::dot(w, d);
-        if (math::length(w - along * d) <= settings.snapRadiusM) {
+        if (math::length(w - along * d) <= settings.snapRadiusM &&
+            std::abs(along) <= settings.maxSnapDistanceM) {
             nearestAlong = std::min(nearestAlong, std::abs(along));
         }
     }
