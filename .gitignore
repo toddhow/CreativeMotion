@@ -7,3 +7,8 @@
 CMakeUserPresets.json
 compile_commands.json
 .cache/
+
+# Design docs (toddhow, 2026-10-17): exported copies stay local and are never committed.
+*Living Design Doc*
+*Implementation Doc*
+/Engineering Guide for Claude Code*
