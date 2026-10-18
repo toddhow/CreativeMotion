@@ -254,7 +254,15 @@ After M1, a side track builds actor alignment for paired animations in Skyrim: t
 - [ ] Hand and foot contact IK in game through a post-graph pose hook (hook points cited); the second framework adapter (SexLab P+) is deferred (toddhow, 2026-10-17)
 - [ ] A validation pass flags stages whose markers cannot be met
 
-Later, not scheduled: body surfaces from mesh sampling, finger contact, an in-game marker editor, community presets.
+### A5 Body surfaces and finger contact (both repositories; spec `docs/tasks/0009`)
+
+- [ ] Capsule radii fitted per actor from points sampled on the skinned body mesh
+- [ ] Fingers curl to touch the surface a hand marker meets
+
+### A6 Marker editor and community presets (both repositories; spec `docs/tasks/0010`)
+
+- [ ] In-game marker editor: capture, adjust, validate and save markers while a scene plays
+- [ ] Community presets: a manifest format with licenses and priorities, installable as separate mods
 
 ## Path to OpenMW
 
@@ -344,6 +352,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-17 | A5 (body surfaces, fingers) and A6 (marker editor, presets) scheduled after A4 (toddhow); specs drafted |
 | 2026-10-17 | Workflow: test-writer subagent paused and reviews once per milestone for A4 to A6, to save tokens (toddhow) |
 | 2026-10-17 | Design docs stay local: git-ignored in both repositories (none was ever committed) |
 | 2026-10-17 | A4: second framework adapter (SexLab P+) deferred; A4 completes without it |
