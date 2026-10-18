@@ -1,5 +1,5 @@
 # Task: A5 Body surfaces from mesh sampling, and finger contact
-Status: draft, waiting for toddhow's approval (2026-10-17). Lighter workflow (CLAUDE.md, "Lighter loop for A4 to A6").
+Status: approved by toddhow 2026-10-17 with all proposals. Lighter workflow (CLAUDE.md, "Lighter loop for A4 to A6").
 Design doc section: CLAUDE.md → "Alignment plugin track" (A5 replaces the "Later, not scheduled" items "body surfaces from mesh sampling" and "finger contact", toddhow 2026-10-17).
 Goal: contacts land on each actor's real body surface instead of a fixed-ratio capsule, and hands close around what they touch.
 Inputs / outputs: main repository: a capsule fit (`kinematic/markers`) and a finger curl solver (`kinematic/ik`), both engine-independent. Plugin: reading an actor's skinned body mesh, per-actor body maps, finger curls after arm IK.

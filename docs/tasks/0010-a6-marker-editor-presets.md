@@ -1,5 +1,5 @@
 # Task: A6 In-game marker editor and community presets
-Status: draft, waiting for toddhow's approval (2026-10-17). Lighter workflow (CLAUDE.md, "Lighter loop for A4 to A6").
+Status: approved by toddhow 2026-10-17 with all proposals (editor: hotkeys first, ImGui later; presets: whole file per scene; SPDX license required). Lighter workflow (CLAUDE.md, "Lighter loop for A4 to A6").
 Design doc section: CLAUDE.md → "Alignment plugin track" (A6 replaces the "Later, not scheduled" items "an in-game marker editor" and "community presets", toddhow 2026-10-17).
 Goal: players author and fix markers while watching the scene, and share them as installable presets.
 Inputs / outputs: main repository: a preset manifest format and merge rules (`kinematic/markers`), engine-independent with tests. Plugin: the editor and the preset loader.
