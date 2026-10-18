@@ -6,7 +6,7 @@ Oct 16, 2026 · @toddhow
 
 This guide tells Claude Code, and any human contributor, how to build the system: what to build first, where code lives, the rules every change follows, and how each change is verified. What to build and why lives in Open Procedural Animation System — Living Design Doc and OpenMW Animation System — Implementation Doc; this guide covers how.
 
-- **Placing it:** export this doc as Markdown and save it at the repository root as `CLAUDE.md`, so Claude Code reads it at the start of every session. Export the two design docs into `docs/`.
+- **Placing it:** export this doc as Markdown and save it at the repository root as `CLAUDE.md`, so Claude Code reads it at the start of every session. Export the two design docs into `docs/` as local copies: `.gitignore` keeps them (and any root export of this guide) out of both repositories, so they are never committed.
 - **Authority:** the design docs decide what the system does; this guide decides how work is done. When they disagree, stop and ask the project owner (toddhow) rather than choosing.
 - **Owner:** toddhow is the architect and final reviewer. He is learning C++ and engine development through this project, so explain non-obvious changes in plain language in each pull request.
 - **Updating:** when a decision changes, update the relevant design doc and this guide in the same change, and add a changelog row.
@@ -171,7 +171,7 @@ Seven milestones take the project from an empty repository to a ragdoll that bal
 - [x] GoogleTest wired in with one passing test
 - [x] Jolt fetched at a pinned version and linked only into `physics/jolt`
 - [ ] CI runs build, format, lint, tests and sanitizers on every pull request
-- [ ] This guide committed as `CLAUDE.md`; design docs exported into `docs/`
+- [ ] This guide committed as `CLAUDE.md`; design docs exported into `docs/` locally (git-ignored, never committed)
 
 ### M1 Physics interface and Jolt backend
 
@@ -342,6 +342,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-17 | Design docs stay local: git-ignored in both repositories (none was ever committed) |
 | 2026-10-17 | A4: second framework adapter (SexLab P+) deferred; A4 completes without it |
 | 2026-10-16 | A3 design approved: root alignment through OStim's alignment API, poses sampled per node; the per-frame pose hook moves to A4; body maps become a JSON format (A3a) |
 | 2026-10-16 | A3: first framework is OStim NG; target runtime Skyrim SE 1.6.1170 |
