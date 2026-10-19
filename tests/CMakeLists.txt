@@ -6,6 +6,8 @@ add_executable(opas_tests
   unit/core_math/TransformTest.cpp
   unit/core_math/Vec3Test.cpp
   unit/core_rig/SkeletonTest.cpp
+  unit/core_rig/RigLoadTest.cpp
+  unit/core_rig/ProfileLoadTest.cpp
   unit/kinematic_ik/TwoBoneIkTest.cpp
   unit/kinematic_ik/FingerCurlTest.cpp
   unit/kinematic_markers/CapsuleFitTest.cpp
@@ -35,6 +37,8 @@ add_executable(opas_tests
   unit/physics_jolt/ValidationTest.cpp
   property/core_math/QuatNormalizationPropertyTest.cpp
   property/kinematic_ik/TwoBoneIkPropertyTest.cpp
+  roundtrip/core_rig/RigProfileRoundTripTest.cpp
+  roundtrip/core_rig/SampleHumanoidTest.cpp
   roundtrip/kinematic_markers/BodyMapHumanoidRoundTripTest.cpp
   roundtrip/kinematic_markers/BodyMapRoundTripTest.cpp
   roundtrip/kinematic_markers/BodyMapFingersTest.cpp
@@ -55,9 +59,11 @@ target_link_libraries(opas_tests PRIVATE
 # Helpers shared by the kinematic tests (seeded random numbers, comparisons,
 # synthetic marker texts) live in tests/common.
 target_include_directories(opas_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common)
-# Small synthetic marker files for the file-loading tests.
+# Small synthetic data files for the file-loading tests (tests/data), and the
+# sample rig and profile shipped in data/.
 target_compile_definitions(opas_tests PRIVATE
-  OPAS_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+  OPAS_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
+  OPAS_REPO_DATA_DIR="${PROJECT_SOURCE_DIR}/data")
 opas_set_project_options(opas_tests)
 opas_copy_sanitizer_runtime(opas_tests)
 

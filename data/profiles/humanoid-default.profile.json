@@ -1,0 +1,19 @@
+{
+  "format": "opas.profile",
+  "version": 1,
+  "rig": "humanoid",
+  "defaults": {
+    "motor": {"stiffnessNmPerRad": 300, "dampingNmsPerRad": 30, "maxTorqueNm": 500},
+    "material": {"friction": 0.8, "restitution": 0, "linearDamping": 0.05, "angularDamping": 0.05}
+  },
+  "joints": [
+    {"bone": "Spine", "motor": {"stiffnessNmPerRad": 600, "dampingNmsPerRad": 60, "maxTorqueNm": 900}},
+    {"bone": "Chest", "motor": {"stiffnessNmPerRad": 600, "dampingNmsPerRad": 60, "maxTorqueNm": 900}},
+    {"bone": "LeftHand", "motor": {"stiffnessNmPerRad": 50, "dampingNmsPerRad": 5, "maxTorqueNm": 60}},
+    {"bone": "RightHand", "motor": {"stiffnessNmPerRad": 50, "dampingNmsPerRad": 5, "maxTorqueNm": 60}}
+  ],
+  "bodies": [
+    {"bone": "LeftFoot", "material": {"friction": 1, "restitution": 0, "linearDamping": 0.05, "angularDamping": 0.05}},
+    {"bone": "RightFoot", "material": {"friction": 1, "restitution": 0, "linearDamping": 0.05, "angularDamping": 0.05}}
+  ]
+}

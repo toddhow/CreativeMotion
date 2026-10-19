@@ -78,7 +78,7 @@ The profile is tuning: how the body behaves. One rig can have several profiles (
 - **Sample values:** the gains above are placeholders until M3 measures tracking. The sample profile's values are marked as "to be tuned in M3" in `docs/formats/profile.md`.
 
 ## Sample humanoid (`data/rigs/humanoid.rig.json`)
-- **Bodies:** 15, the usual ragdoll set: pelvis, spine, chest, head, plus upper arm, forearm, hand, thigh, shin and foot on each side.
+- **Bodies:** 16: pelvis, spine, chest, head, plus upper arm, forearm, hand, thigh, shin and foot on each side. (Corrected 2026-10-18 during implementation: the draft said 15, but the listed parts are 4 + 2 × 6 = 16, and three trunk bodies match de Leva's three trunk segments.)
 - **Neck and fingers:** these are bones without bodies.
 - **Size:** synthetic, 1.75 m and 75 kg.
 - **Masses:** split by published segment-mass fractions (proposal: de Leva 1996, "Adjustments to Zatsiorsky-Seluyanov's segment inertia parameters", J. Biomech. 29(9)).
@@ -95,7 +95,7 @@ The profile is tuning: how the body behaves. One rig can have several profiles (
 
 ## Acceptance criteria
 - [ ] `docs/formats/rig.md` and `docs/formats/profile.md` document every field, its rule, the error rules and the canonical form, in the style of `bodymap.md`.
-- [ ] The sample rig and profile load, validate against each other and give a skeleton that passes `validateSkeleton`: 15 bodies, total mass 75 kg ± 0.01, the root body on `Pelvis`, and a joint on every other body.
+- [ ] The sample rig and profile load, validate against each other and give a skeleton that passes `validateSkeleton`: 16 bodies (see "Sample humanoid"), total mass 75 kg ± 0.01, the root body on `Pelvis`, and a joint on every other body.
 - [ ] The loader rejects each of these with the right file, line and pointer:
   - a syntax error, an unknown key or a missing field;
   - a wrong `format` or `version`;

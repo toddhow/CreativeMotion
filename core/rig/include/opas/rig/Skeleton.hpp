@@ -1,7 +1,7 @@
 #pragma once
 
-// Minimal skeleton: bone names, parents and rest pose. M2 extends this into
-// the full rig format (bodies, masses, joint limits) with a file loader.
+// Skeleton: bone names, parents and rest pose. A rig (Rig.hpp) adds bodies,
+// masses and joint limits on top, and is loaded from a rig file (RigFile.hpp).
 
 #include "opas/math/Transform.hpp"
 
@@ -18,11 +18,15 @@ struct Bone {
     std::string name;
     int parent = -1;           // index into Skeleton::bones; -1 for a root
     math::Transform localRest; // rest pose relative to the parent (or model root)
+
+    friend bool operator==(const Bone&, const Bone&) = default;
 };
 
 // Bones are ordered so every parent comes before its children.
 struct Skeleton {
     std::vector<Bone> bones;
+
+    friend bool operator==(const Skeleton&, const Skeleton&) = default;
 };
 
 // Empty string if valid; otherwise a message naming the bone and field, e.g.
