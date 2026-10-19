@@ -10,6 +10,7 @@
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
@@ -325,6 +326,18 @@ struct JointSlot {
     std::uint32_t bodyB = 0;
 };
 
+// A collision group: one Jolt GroupFilterTable shared (by reference count) by
+// the group and every body in it, so bodies keep working after the group is
+// destroyed. joltGroupId is a serial number, never reused, so a body of a
+// destroyed group can never be mistaken for a member of a later group.
+struct GroupSlot {
+    JPH::Ref<JPH::GroupFilterTable> table;
+    std::uint32_t generation = 1;
+    bool alive = false;
+    std::uint32_t subGroupCount = 0;
+    JPH::CollisionGroup::GroupID joltGroupId = 0;
+};
+
 struct ListenerEntry {
     StepListener* listener = nullptr; // not owned, see StepListener
     StepListenerId id;
@@ -363,6 +376,11 @@ public:
     CreateResult<JointId> createJoint(const JointDesc& desc) override;
     bool destroyJoint(JointId joint) override;
 
+    CreateResult<CollisionGroupId> createCollisionGroup(std::uint32_t subGroupCount) override;
+    bool setSubGroupsCollide(CollisionGroupId group, std::uint32_t a, std::uint32_t b,
+                             bool collide) override;
+    bool destroyCollisionGroup(CollisionGroupId group) override;
+
     bool setJointMotor(JointId joint, const JointMotor& motor) override;
     bool setJointTarget(JointId joint, Quat targetRotation) override;
 
@@ -384,6 +402,7 @@ public:
 private:
     [[nodiscard]] const BodySlot* findBody(BodyId body) const;
     [[nodiscard]] JointSlot* findJoint(JointId joint);
+    [[nodiscard]] GroupSlot* findGroup(CollisionGroupId group);
     void destroyJointSlot(std::uint32_t index);
     void stopKinematicBodiesAtTargets();
     // Wakes both bodies of a joint so a changed motor takes effect.
@@ -407,6 +426,9 @@ private:
     std::vector<std::uint32_t> freeBodySlots_;
     std::vector<JointSlot> jointSlots_;
     std::vector<std::uint32_t> freeJointSlots_;
+    std::vector<GroupSlot> groupSlots_;
+    std::vector<std::uint32_t> freeGroupSlots_;
+    JPH::CollisionGroup::GroupID nextGroupId_ = 0;
     std::vector<std::uint32_t> kinematicTargets_; // body slot indices moved this step
     std::vector<ListenerEntry> listeners_;
     std::uint32_t nextListenerSerial_ = 0;
@@ -426,6 +448,9 @@ JoltWorld::JoltWorld(const WorldConfig& config) : config_(config)
     // Reserved up front so freeing a slot never allocates.
     freeBodySlots_.reserve(config.maxBodies);
     freeJointSlots_.reserve(config.maxJoints);
+    // A group only matters with bodies in it, so maxBodies bounds them too.
+    groupSlots_.reserve(config.maxBodies);
+    freeGroupSlots_.reserve(config.maxBodies);
     kinematicTargets_.reserve(config.maxBodies);
 }
 
@@ -473,6 +498,17 @@ CreateResult<BodyId> JoltWorld::createBody(const BodyDesc& desc)
     if (std::string error = validateBody(desc); !error.empty()) {
         return failure<BodyId>(ErrorCode::InvalidDescription, std::move(error));
     }
+    const GroupSlot* group = nullptr;
+    if (desc.collisionGroup.isValid()) {
+        group = findGroup(desc.collisionGroup);
+        if (group == nullptr) {
+            return failure<BodyId>(ErrorCode::InvalidHandle, "collisionGroup is not a live group");
+        }
+        if (desc.subGroup >= group->subGroupCount) {
+            return failure<BodyId>(ErrorCode::InvalidDescription,
+                                   "subGroup must be < the group's subGroupCount");
+        }
+    }
     const JPH::ShapeRefC shape = createJoltShape(desc.shape);
     if (shape == nullptr) {
         return failure<BodyId>(ErrorCode::InvalidDescription, "shape could not be created");
@@ -500,6 +536,10 @@ CreateResult<BodyId> JoltWorld::createBody(const BodyDesc& desc)
     settings.mLinearDamping = desc.linearDamping;
     settings.mAngularDamping = desc.angularDamping;
     settings.mUserData = *index; // lets ray hits find our handle
+    if (group != nullptr) {
+        settings.mCollisionGroup =
+            JPH::CollisionGroup(group->table, group->joltGroupId, desc.subGroup);
+    }
     if (desc.motion == MotionType::Dynamic) {
         // Use the authored mass; Jolt derives inertia from the shape.
         settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
@@ -618,6 +658,73 @@ bool JoltWorld::destroyJoint(JointId joint)
         return false;
     }
     destroyJointSlot(joint.index);
+    return true;
+}
+
+GroupSlot* JoltWorld::findGroup(CollisionGroupId group)
+{
+    if (!group.isValid() || group.index >= groupSlots_.size()) {
+        return nullptr;
+    }
+    GroupSlot& slot = groupSlots_[group.index];
+    return (slot.alive && slot.generation == group.generation) ? &slot : nullptr;
+}
+
+CreateResult<CollisionGroupId> JoltWorld::createCollisionGroup(std::uint32_t subGroupCount)
+{
+    if (inStep_) {
+        return failure<CollisionGroupId>(
+            ErrorCode::CalledDuringStep,
+            "createCollisionGroup cannot be called from a step listener");
+    }
+    if (subGroupCount == 0) {
+        return failure<CollisionGroupId>(ErrorCode::InvalidDescription,
+                                         "subGroupCount must be > 0");
+    }
+    const std::optional<std::uint32_t> index =
+        takeSlot(groupSlots_, freeGroupSlots_, config_.maxBodies);
+    if (!index) {
+        return failure<CollisionGroupId>(ErrorCode::CapacityExceeded,
+                                         "too many collision groups (limit maxBodies)");
+    }
+    GroupSlot& slot = groupSlots_[*index];
+    slot.table = new JPH::GroupFilterTable(subGroupCount); // everything collides at first
+    slot.alive = true;
+    slot.subGroupCount = subGroupCount;
+    slot.joltGroupId = nextGroupId_++;
+    return CreateResult<CollisionGroupId>{
+        CollisionGroupId{*index, slot.generation}, ErrorCode::None, {}};
+}
+
+bool JoltWorld::setSubGroupsCollide(CollisionGroupId group, std::uint32_t a, std::uint32_t b,
+                                    bool collide)
+{
+    GroupSlot* slot = findGroup(group);
+    if (inStep_ || slot == nullptr || a == b || a >= slot->subGroupCount ||
+        b >= slot->subGroupCount) {
+        return false;
+    }
+    // GroupFilterTable expects the smaller sub-group first (GetBit asserts it).
+    const std::uint32_t low = std::min(a, b);
+    const std::uint32_t high = std::max(a, b);
+    if (collide) {
+        slot->table->EnableCollision(low, high);
+    } else {
+        slot->table->DisableCollision(low, high);
+    }
+    return true;
+}
+
+bool JoltWorld::destroyCollisionGroup(CollisionGroupId group)
+{
+    GroupSlot* slot = findGroup(group);
+    if (inStep_ || slot == nullptr) {
+        return false;
+    }
+    slot->table = nullptr; // member bodies keep their own references
+    slot->alive = false;
+    ++slot->generation;
+    freeGroupSlots_.push_back(group.index);
     return true;
 }
 

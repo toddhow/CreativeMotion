@@ -49,6 +49,7 @@ struct Handle {
 using BodyId = Handle<struct BodyTag>;
 using JointId = Handle<struct JointTag>;
 using StepListenerId = Handle<struct StepListenerTag>;
+using CollisionGroupId = Handle<struct CollisionGroupTag>;
 
 enum class ErrorCode : std::uint8_t {
     None,

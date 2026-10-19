@@ -46,6 +46,11 @@ struct BodyDesc {
     float restitution = 0.0f;
     float linearDamping = 0.05f;
     float angularDamping = 0.05f;
+    // Collision filtering (see PhysicsWorld::createCollisionGroup). An invalid
+    // group (the default) collides with everything. In a group, subGroup must
+    // be < the group's subGroupCount.
+    CollisionGroupId collisionGroup;
+    std::uint32_t subGroup = 0;
 };
 
 // Swing-twist joint between two bodies, defined in world space at creation.

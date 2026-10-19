@@ -26,6 +26,7 @@ add_executable(opas_tests
   unit/kinematic_markers/PoseClipLoadTest.cpp
   unit/physics_jolt/BackendInfoTest.cpp
   unit/physics_jolt/BoxDropTest.cpp
+  unit/physics_jolt/CollisionGroupTest.cpp
   unit/physics_jolt/DeterminismTest.cpp
   unit/physics_jolt/DriveBodiesTest.cpp
   unit/physics_jolt/HandlesTest.cpp
