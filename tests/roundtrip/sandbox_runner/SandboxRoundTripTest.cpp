@@ -72,7 +72,7 @@ TEST(RecordingRoundTrip, EdgeFloatsSurviveExactly)
                                      std::numeric_limits<float>::min(),
                                      0.1f,
                                      1.0f / 3.0f,
-                                     16777216.0f,
+                                     7.038531e-26f, // lands 1 ulp off if read through double
                                      -0.0f,
                                      1e-30f,
                                      3.0e38f,

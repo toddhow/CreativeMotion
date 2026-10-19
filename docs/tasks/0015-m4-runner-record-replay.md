@@ -127,3 +127,19 @@ Out of scope:
 2. **Recording content:** every body, every step, all 13 numbers (position, rotation, both velocities)? Or positions and rotations only, which roughly halves the file size?
 3. **Pose sources:** are named built-in sources (`rest`, `armWave`) fine for M4? Animation clips as pose sources come with the animation runtime later.
 4. **Limp option:** for the `floor` scenario, add a scenario-level `"motors": "off" | "profile"` per ragdoll, or ship a separate limp profile file in `data/profiles/`?
+
+## Implementation notes (2026-10-19)
+- **Scenario details beyond the spec, for toddhow to confirm:**
+  - The stairs ragdoll gets a 30 N·s forward chest push at 0.2 s. Standing still on the top step, it would topple in whichever direction small asymmetries pick, not necessarily down the stairs.
+  - The slope has friction 0.1. Jolt combines friction as the geometric mean (`ContactConstraintManager.h`, `mCombineFriction`), so 0.5 under the ragdoll's 0.8 would grip at 20°.
+  - A floor sits under the slope's lower edge.
+  - The ragdoll starts lying face down, held 0.22 m clear of the slope surface.
+- **Goldens:** recorded on Windows/MSVC Debug. Release reproduces them byte for byte (`OpasRun.RecordedFileEqualsTheGolden`, Windows only).
+- **Milestone review (fresh subagent), findings fixed:**
+  - Recording floats are now read from their own text with `std::from_chars`. Reading through double rounded twice, and one float, 7.038531e-26, came back one unit in the last place off; it is now in the edge-value test.
+  - The loader rejects an impulse that would fall after the last step, and a duration shorter than half a step.
+  - New tool tests: the first per-step difference is printed, the recorded file is byte-identical to the golden on Windows, and an option given twice is an error. `armWave` is now exercised in process.
+  - Smaller fixes: static-box errors carry their line, `opas_run` checks the write after closing the file, and a stale comment on world capacity is corrected.
+- **Open:**
+  - toddhow to confirm the scenario details above.
+  - The first Linux CI run will show whether the shared MSVC goldens hold within tolerance, or whether the approved fallback (per-platform goldens) is needed.

@@ -239,3 +239,23 @@ if(TARGET opas_run)
     "--scenario|${S}/push.scenario.json|--compare|${G}/does_not_exist.recording.json"
     "R1=does_not_exist[.]recording[.]json")
 endif()
+
+if(TARGET opas_run)
+  # A 61 N s push compared with the 60 N s golden: the first per-step
+  # difference is printed (same header, different motion).
+  opas_add_run_test(OpasRun.PrintsTheFirstStepDifference 1
+    "--scenario|${CMAKE_CURRENT_SOURCE_DIR}/data/sandbox/push61.scenario.json|--compare|${G}/push.recording.json"
+    "R1=DIFFERS step [0-9]+, hero/[A-Za-z]+: (position|rotation|linearVelocity|angularVelocity) differs by")
+  opas_add_run_test(OpasRun.OptionGivenTwice 2
+    "--scenario|${S}/push.scenario.json|--scenario|${S}/push.scenario.json|--record|x"
+    "R1=given twice")
+  # The file OpasRun.Records wrote is the golden, byte for byte (same build
+  # platform as the goldens; on other platforms the Replay gate's tolerance
+  # comparison is what counts, so this check runs on Windows only).
+  set_tests_properties(OpasRun.Records PROPERTIES FIXTURES_SETUP push_recording)
+  if(WIN32)
+    add_test(NAME OpasRun.RecordedFileEqualsTheGolden
+      COMMAND ${CMAKE_COMMAND} -E compare_files "${out}" "${G}/push.recording.json")
+    set_tests_properties(OpasRun.RecordedFileEqualsTheGolden PROPERTIES FIXTURES_REQUIRED push_recording)
+  endif()
+endif()

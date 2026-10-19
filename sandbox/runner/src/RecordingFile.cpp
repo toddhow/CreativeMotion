@@ -5,11 +5,13 @@
 #include "opas/math/Vec3.hpp"
 
 #include <bit>
+#include <charconv>
 #include <cmath>
 #include <cstdint>
 #include <format>
 #include <limits>
 #include <set>
+#include <system_error>
 #include <utility>
 
 namespace opas::sandbox {
@@ -59,7 +61,16 @@ public:
             if (!std::isfinite(d) || !(std::abs(d) < kFloatRoundingLimit)) {
                 return fail(number, at(i), "must be a finite float");
             }
-            out[i] = static_cast<float>(d);
+            // Read the number's own text straight as float: going through
+            // double rounds twice, and for some values (7.038531e-26 among
+            // all floats) lands one unit off (found in the M4 review).
+            const std::string_view text = sourceText(number);
+            float f = 0.0f;
+            const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), f);
+            if (error != std::errc() || end != text.data() + text.size()) {
+                f = static_cast<float>(d); // cannot happen for valid JSON numbers
+            }
+            out[i] = f;
         }
         return true;
     }

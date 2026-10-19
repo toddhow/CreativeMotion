@@ -44,7 +44,13 @@ int runTool(int argc, const char* const* argv)
             return usage(std::string(option) + " needs a value");
         }
         const std::string value = argv[++i];
-        (option == "--scenario" ? scenario : option == "--record" ? record : compare) = value;
+        std::string& target = option == "--scenario" ? scenario
+                              : option == "--record" ? record
+                                                     : compare;
+        if (!target.empty()) {
+            return usage(std::string(option) + " given twice");
+        }
+        target = value;
     }
     if (scenario.empty()) {
         return usage("--scenario is required");
@@ -62,6 +68,7 @@ int runTool(int argc, const char* const* argv)
     if (!record.empty()) {
         std::ofstream out(record, std::ios::binary);
         out << opas::sandbox::writeRecording(recording);
+        out.close(); // flush now, so a failed write is seen below
         if (!out) {
             std::cerr << record << ": cannot write the recording\n";
             return kBadInput;

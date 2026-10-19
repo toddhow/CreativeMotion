@@ -4,6 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
+#include <cstddef>
 #include <string>
 
 // Replay and Determinism gates (M4, docs/tasks/0015). The CI replay gate also
@@ -66,6 +68,45 @@ TEST(ReplayGate, ASlightlyHarderPushIsCaught)
     EXPECT_TRUE(sandbox::compareRecordings(run.recording.value_or(sandbox::Recording{}),
                                            golden.value.value_or(sandbox::Recording{}))
                     .has_value());
+}
+
+// The armWave pose source drives the right arm, deterministically: with the
+// pelvis held, the right forearm moves while the left one stays put.
+TEST(PoseSources, ArmWaveMovesTheRightArmOnly)
+{
+    const auto loaded = sandbox::loadScenarioFile(scenarioPath("push"));
+    ASSERT_TRUE(loaded.ok()) << loaded.error.toString();
+    sandbox::Scenario scenario = loaded.value.value_or(sandbox::Scenario{});
+    scenario.impulses.clear();
+    scenario.durationS = 1.0;
+    scenario.ragdolls[0].pose = "armWave";
+    scenario.ragdolls[0].rootMotion = motor::RootMotion::Kinematic;
+    scenario.ragdolls[0].root.translation.z = 0.5; // held clear of the floor
+    const sandbox::RunOptions options{OPAS_SANDBOX_SCENARIO_DIR, "push.scenario.json"};
+    const sandbox::RunResult first = sandbox::run(scenario, options);
+    const sandbox::RunResult second = sandbox::run(scenario, options);
+    ASSERT_TRUE(first.ok()) << first.error.toString();
+    ASSERT_TRUE(second.ok()) << second.error.toString();
+    const sandbox::Recording recording = first.recording.value_or(sandbox::Recording{});
+    EXPECT_TRUE(sandbox::sameBits(recording, second.recording.value_or(sandbox::Recording{})));
+
+    const auto indexOf = [&](const std::string& body) {
+        for (std::size_t i = 0; i < recording.bodies.size(); ++i) {
+            if (recording.bodies[i] == body) {
+                return i;
+            }
+        }
+        ADD_FAILURE() << body;
+        return std::size_t{0};
+    };
+    const auto moved = [&](std::size_t body) {
+        // At 0.5 s the shoulder is at the peak of its 0.6 rad swing.
+        const sandbox::BodySample& start = recording.steps.at(0).at(body);
+        const sandbox::BodySample& peak = recording.steps.at(30).at(body);
+        return std::hypot(peak[0] - start[0], peak[1] - start[1], peak[2] - start[2]);
+    };
+    EXPECT_GT(moved(indexOf("hero/RightForearm")), 0.1);
+    EXPECT_LT(moved(indexOf("hero/LeftForearm")), 0.02);
 }
 
 } // namespace

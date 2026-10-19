@@ -25,6 +25,7 @@ struct StaticBox {
     math::Vec3 halfExtentsM;
     math::Transform pose; // centre and rotation in the world
     double friction = 0.0;
+    std::size_t line = 0; // line of this entry in its file (0 when built in code)
 };
 
 enum class MotorMode : std::uint8_t {

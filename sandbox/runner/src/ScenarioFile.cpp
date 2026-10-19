@@ -75,6 +75,7 @@ public:
         if (!value.is_object()) {
             return fail(value, pointer, "must be a static box object");
         }
+        out.line = lineAt(value.start_pos());
         if (!onlyKeys(value, pointer,
                       {"name", "halfExtentsM", "translationM", "rotation", "friction"}) ||
             !stringField(value, pointer, "name", out.name) ||
@@ -145,6 +146,12 @@ public:
         if (!(out.atS >= 0.0 && out.atS < scenario.durationS)) {
             return fail(value.at("atS"), pointer + "/atS", "must be in [0, durationS)");
         }
+        // An impulse due after the last step would silently never fire.
+        if (impulseStep(scenario, out.atS) >= stepCount(scenario)) {
+            return fail(value.at("atS"), pointer + "/atS",
+                        "falls after the last step (the run has " +
+                            std::to_string(stepCount(scenario)) + " steps)");
+        }
         for (const ScenarioRagdoll& ragdoll : scenario.ragdolls) {
             if (ragdoll.name == out.ragdoll) {
                 return true;
@@ -174,6 +181,10 @@ public:
         }
         if (!(out.durationS > 0.0 && out.durationS <= kMaxDurationS)) {
             return fail(root.at("durationS"), "/durationS", "must be in (0, 60]");
+        }
+        if (stepCount(out) < 1) {
+            return fail(root.at("durationS"), "/durationS",
+                        "is shorter than half a step: the run would have no steps");
         }
         if (!vec3Field(root, "", "gravityMps2", out.gravityMps2)) {
             return false;

@@ -41,7 +41,7 @@ A scenario is a world for the headless runner to play: its step rate, length and
 | `version` | integer | `1` |
 | `name` | string | non-empty; copied into the recording |
 | `stepsPerSecond` | integer | in `[1, 10000]`; the fixed physics step is its inverse |
-| `durationS` | number | in `(0, 60]`; the run has `durationS × stepsPerSecond` steps, rounded to the nearest |
+| `durationS` | number | in `(0, 60]`; the run has `durationS × stepsPerSecond` steps, rounded to the nearest, and at least one |
 | `gravityMps2` | array of 3 numbers | world gravity |
 | `statics` | array | required; may be empty |
 | static `name` | string | non-empty, unique among statics |
@@ -56,7 +56,7 @@ A scenario is a world for the headless runner to play: its step rate, length and
 | ragdoll `motors` | string | `"profile"` (the profile's gains) or `"off"` (stiffness 0 on every joint, damping kept: limp) |
 | ragdoll `pose` | string | a built-in pose source: `"rest"` (the rig's rest pose) or `"armWave"` (M3's arm wave, needs bones `RightUpperArm` and `RightForearm`) |
 | `impulses` | array | required; may be empty |
-| impulse `atS` | number | in `[0, durationS)` |
+| impulse `atS` | number | in `[0, durationS)`, and due before the last step ends (see Timing): an impulse that would fall after the last step is an error, not silently dropped |
 | impulse `ragdoll` | string | the `name` of a ragdoll in this file |
 | impulse `bone` | string | a bone with a body in that ragdoll's rig, checked when the scenario runs |
 | impulse `impulseNs` | array of 3 numbers | the impulse, world axes |

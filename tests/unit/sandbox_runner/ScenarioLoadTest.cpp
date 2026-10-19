@@ -116,6 +116,10 @@ const Edit kEdits[] = {
     {"ImpulseAfterTheEnd", R"("atS": 0.5)", R"("atS": 3)", 24, "/impulses/0/atS"},
     {"NegativeImpulseTime", R"("atS": 0.5)", R"("atS": -0.1)", 24, "/impulses/0/atS"},
     {"NonFiniteImpulse", "[0, 60, 0]", "[0, 1e999, 0]", 24, "/impulses/0/impulseNs/1"},
+    // 2.999 s is step ceil(179.94) = 180 of 180: it would never fire.
+    {"ImpulseAfterTheLastStep", R"("atS": 0.5)", R"("atS": 2.999)", 24, "/impulses/0/atS"},
+    // 0.005 s at 60 Hz rounds to 0 steps.
+    {"NoSteps", R"("durationS": 3)", R"("durationS": 0.005)", 6, "/durationS"},
 };
 
 INSTANTIATE_TEST_SUITE_P(Edits, ScenarioRejects, ::testing::ValuesIn(kEdits),

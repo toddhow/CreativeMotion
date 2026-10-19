@@ -177,8 +177,9 @@ RunResult run(const Scenario& scenario, const RunOptions& options)
     physics::WorldConfig config;
     config.fixedStepSeconds = 1.0f / static_cast<float>(scenario.stepsPerSecond);
     config.gravityMps2 = toPhysics(scenario.gravityMps2);
-    // A collision group per ragdoll also counts against maxBodies.
-    config.maxBodies = bodyCount + static_cast<std::uint32_t>(scenario.ragdolls.size());
+    // Collision groups have their own table, capped at maxBodies (one per
+    // ragdoll here), so the body count alone is enough.
+    config.maxBodies = bodyCount;
     config.maxJoints = jointCount;
     std::string worldError;
     const std::unique_ptr<physics::PhysicsWorld> world =
@@ -198,7 +199,8 @@ RunResult run(const Scenario& scenario, const RunOptions& options)
         desc.friction = static_cast<float>(box.friction);
         const auto created = world->createBody(desc);
         if (!created.ok()) {
-            result.error = errorAt(options, 1, "/statics/" + std::to_string(s), created.message);
+            result.error =
+                errorAt(options, box.line, "/statics/" + std::to_string(s), created.message);
             return result;
         }
     }

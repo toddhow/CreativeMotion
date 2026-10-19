@@ -193,6 +193,20 @@ public:
         return true;
     }
 
+    // The exact text a parsed value came from (positions are kept by
+    // JSON_DIAGNOSTIC_POSITIONS), e.g. to read a number straight as float
+    // without rounding twice through double. Empty if unknown.
+    [[nodiscard]] std::string_view sourceText(const Json& value) const
+    {
+        const std::size_t start = value.start_pos();
+        const std::size_t end = value.end_pos();
+        if (start == std::string::npos || end == std::string::npos || end < start ||
+            end > text_.size()) {
+            return {};
+        }
+        return text_.substr(start, end - start);
+    }
+
 private:
     std::string_view text_;
     std::string_view file_;
