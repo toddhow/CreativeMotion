@@ -117,14 +117,20 @@ public:
                numberField(value, pointer, "twistMaxRad", out.twistMaxRad);
     }
 
-    // Turns file bones into skeleton bones. Each parent must be a bone listed
-    // earlier; duplicates are reported at their second occurrence.
+    // Turns file bones into skeleton bones. Names must be clean (so a bad name
+    // is reported as itself, not as an unknown parent of the next bone), each
+    // parent must be a bone listed earlier, and duplicates are reported at
+    // their second occurrence.
     bool resolveBones(const Json& root, const std::vector<FileBone>& fileBones, Skeleton& out)
     {
         out.bones.resize(fileBones.size());
         for (std::size_t i = 0; i < fileBones.size(); ++i) {
             const FileBone& bone = fileBones[i];
             const std::string pointer = "/bones/" + std::to_string(i);
+            if (!detail::isValidName(bone.name)) {
+                return fail(root.at(Json::json_pointer(pointer + "/name")), pointer + "/name",
+                            detail::kInvalidNameMessage);
+            }
             for (std::size_t j = 0; j < i; ++j) {
                 if (fileBones[j].name == bone.name) {
                     return fail(root.at(Json::json_pointer(pointer + "/name")), pointer + "/name",

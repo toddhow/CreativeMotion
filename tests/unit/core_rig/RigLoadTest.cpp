@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include <cstddef>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -228,6 +229,47 @@ TEST(RigLoad, MissingFileIsAnErrorNotAThrow)
 TEST(RigLoad, DocumentMustBeAnObject)
 {
     expectRejected("[1, 2]", 1, "");
+}
+
+// Names must be valid UTF-8 without control characters, or a rig could pass
+// validation yet write a file that does not load back.
+TEST(RigRejects, ControlCharacterInBoneName)
+{
+    expectRejected(replaceOnce(kRigText, R"({"name": "Mid")", R"({"name": "M\u0001id")"), 7,
+                   "/bones/1/name");
+}
+
+TEST(RigValidate, RejectsNamesThatAreNotCleanUtf8)
+{
+    Rig rig = loadedTestRig();
+    rig.skeleton.bones[0].name = "\xFF";
+    EXPECT_EQ(validateRig(rig), "/bones/0/name: must be valid UTF-8 without control characters");
+    rig = loadedTestRig();
+    rig.skeleton.bones[0].name = "\xC0\xAF"; // overlong encoding of '/'
+    EXPECT_EQ(validateRig(rig).rfind("/bones/0/name: ", 0), 0U) << validateRig(rig);
+    rig = loadedTestRig();
+    rig.name = std::string("rig\0name", 8);
+    EXPECT_EQ(validateRig(rig).rfind("/name: ", 0), 0U) << validateRig(rig);
+    rig = loadedTestRig();
+    rig.skeleton.bones[0].name = "Kopf-\xC3\x84-\xF0\x9F\xA6\xB4"; // "Kopf-Ä-" and a 4-byte emoji
+    rig.bodies[0].bone = rig.skeleton.bones[0].name;
+    EXPECT_EQ(validateRig(rig), "");
+}
+
+TEST(RigValidate, RejectsNanAndInfinity)
+{
+    Rig rig = loadedTestRig();
+    rig.bodies[1].massKg = std::numeric_limits<double>::quiet_NaN();
+    EXPECT_EQ(validateRig(rig), "/bodies/1/massKg: must be > 0");
+    rig = loadedTestRig();
+    rig.joints[0].twistAxis.x = std::numeric_limits<double>::infinity();
+    EXPECT_EQ(validateRig(rig), "/joints/0/twistAxis: must be a unit vector");
+    rig = loadedTestRig();
+    rig.joints[1].twistMaxRad = std::numeric_limits<double>::quiet_NaN();
+    EXPECT_EQ(validateRig(rig), "/joints/1/twistMaxRad: must be in [-pi, pi]");
+    rig = loadedTestRig();
+    rig.skeleton.bones[2].localRest.translation.y = std::numeric_limits<double>::quiet_NaN();
+    EXPECT_EQ(validateRig(rig), "/bones/2/translationM: must be finite");
 }
 
 } // namespace

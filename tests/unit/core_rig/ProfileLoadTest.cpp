@@ -172,4 +172,16 @@ TEST(ProfileValidate, ChecksTheProfilesOwnRulesToo)
               "/defaults/material/friction: must be >= 0");
 }
 
+TEST(ProfileValidate, RejectsNamesThatAreNotCleanUtf8)
+{
+    Profile profile = loadedTestProfile();
+    profile.bodies[0].bone = "Ball\x7F";
+    EXPECT_EQ(validateProfile(profile, loadedTestRig()),
+              "/bodies/0/bone: must be valid UTF-8 without control characters");
+    profile = loadedTestProfile();
+    profile.rig = "\xE2\x82"; // truncated 3-byte sequence
+    EXPECT_TRUE(startsWith(validateProfile(profile, loadedTestRig()), "/rig: "))
+        << validateProfile(profile, loadedTestRig());
+}
+
 } // namespace

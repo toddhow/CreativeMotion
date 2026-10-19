@@ -51,9 +51,9 @@ Units are SI (meters, kilograms, radians), in a right-handed frame with Z up. Ho
 | --- | --- | --- |
 | `format` | string | exactly `"opas.rig"` |
 | `version` | integer | `1` |
-| `name` | string | non-empty; what a profile's `rig` names |
+| `name` | string | non-empty, without control characters (U+0000–U+001F, U+007F); what a profile's `rig` names |
 | `bones` | array | at least 1 |
-| bone `name` | string | non-empty, unique among bones |
+| bone `name` | string | non-empty, unique among bones, without control characters |
 | bone `parent` | string | `""` for a root, else the `name` of a bone listed **earlier** (parents first) |
 | bone `translationM` | array of 3 numbers | rest position relative to the parent bone (or the model root) |
 | bone `rotation` | array of 4 numbers `[x, y, z, w]` | rest rotation relative to the parent; unit length within 1e-6 |
@@ -104,9 +104,9 @@ Same rules as the other formats (`docs/formats/markers.md`): file name, 1-based 
 
 Checking order:
 
-1. Header, `name`, then each bone: types and finite numbers, unit rotations.
-2. Bone names and parents.
-3. Each body, then each joint, in file order: types first, then ranges.
+1. Header and `name`, then the types of each bone (finite numbers, unit rotations).
+2. Bone names (clean UTF-8, unique) and parents.
+3. The types of all bodies, then of all joints (finite numbers, unit rotations, shape keys); then the rules for the rig name and bones, then for each body, then for each joint, in file order.
 4. The body tree last.
 
 ## Canonical form

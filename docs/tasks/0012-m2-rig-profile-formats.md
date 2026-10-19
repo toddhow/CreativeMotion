@@ -1,5 +1,5 @@
 # Task: M2 Rig and profile formats
-Status: approved by toddhow on 2026-10-18 with all four proposals: the lighter loop continues, core loaders may use nlohmann/json privately, version 1 rigs carry their own bones, and the sources are de Leva 1996 plus a published range-of-motion table.
+Status: implemented 2026-10-18; milestone review done and its findings fixed; waiting for toddhow's merge approval. Approved by toddhow on 2026-10-18 with all four proposals: the lighter loop continues, core loaders may use nlohmann/json privately, version 1 rigs carry their own bones, and the sources are de Leva 1996 plus a published range-of-motion table.
 Design doc section: CLAUDE.md → "First milestones" → M2; OpenMW Animation System — Implementation Doc → "Engine integration points" (rig profiles load through the VFS like other content) and "Animation storage and formats" (skeleton profiles). **The Living Design Doc is not in the repository, so the file layouts below are drafted from the guide, as M1's interface was. Reconcile them once it is exported.**
 Goal: a character's physical body (skeleton, rigid bodies, masses, joint limits) and its tuning (motor gains, materials) come from two JSON files. Both files load with located errors and write back byte-for-byte, and a sample humanoid ships with them.
 Inputs / outputs:
@@ -94,9 +94,9 @@ The profile is tuning: how the body behaves. One rig can have several profiles (
 - **Guide conflict:** the guide says "`core` depends only on `physics/interface` and the standard library", but it also puts loaders in `core/rig` and names nlohmann/json as the parser. Proposal: amend the rule to "plus nlohmann/json, privately, for loaders only". This needs toddhow's decision (see Questions).
 
 ## Acceptance criteria
-- [ ] `docs/formats/rig.md` and `docs/formats/profile.md` document every field, its rule, the error rules and the canonical form, in the style of `bodymap.md`.
-- [ ] The sample rig and profile load, validate against each other and give a skeleton that passes `validateSkeleton`: 16 bodies (see "Sample humanoid"), total mass 75 kg ± 0.01, the root body on `Pelvis`, and a joint on every other body.
-- [ ] The loader rejects each of these with the right file, line and pointer:
+- [x] `docs/formats/rig.md` and `docs/formats/profile.md` document every field, its rule, the error rules and the canonical form, in the style of `bodymap.md`.
+- [x] The sample rig and profile load, validate against each other and give a skeleton that passes `validateSkeleton`: 16 bodies (see "Sample humanoid"), total mass 75 kg ± 0.01, the root body on `Pelvis`, and a joint on every other body.
+- [x] The loader rejects each of these with the right file, line and pointer:
   - a syntax error, an unknown key or a missing field;
   - a wrong `format` or `version`;
   - a duplicate bone, or a parent that is unknown or listed after its child;
@@ -109,8 +109,8 @@ The profile is tuning: how the body behaves. One rig can have several profiles (
   - limits outside `[0, pi]` for cones, or outside `[-pi, pi]` for twist, or a twist minimum above its maximum;
   - in a profile: negative gains or material values, `maxTorqueNm <= 0`, or a duplicate override;
   - when checking a profile against a rig: a rig name mismatch, or an override on a bone with no joint or body.
-- [ ] Writing the sample files, and synthetic rigs and profiles covering every shape type, then reading them back gives byte-for-byte identical text. Loading and then writing a canonical file reproduces it.
-- [ ] All existing tests still pass, and the `kinematic/markers` public headers are unchanged.
+- [x] Writing the sample files, and synthetic rigs and profiles covering every shape type, then reading them back gives byte-for-byte identical text. Loading and then writing a canonical file reproduces it.
+- [x] All existing tests still pass, and the `kinematic/markers` public headers are unchanged.
 
 Out of scope:
 - Building a ragdoll from the rig (M3).

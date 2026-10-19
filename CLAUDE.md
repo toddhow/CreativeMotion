@@ -97,7 +97,7 @@ Dependencies point one way, and the physics interface is the boundary that keeps
 - **Core never renders:** debug overlays are produced as data (points, lines, labels, colors) and drawn by the viewer.
 - **Same pattern later:** the kinematic layers, face layer and importers each become modules with the same boundaries; OpenMW becomes one more host.
 
-The `kinematic` modules follow the same rules: they depend only on `core/math` and `core/rig`, never on a physics backend, a game or a framework.
+The `kinematic` modules follow the same rules: they depend only on `core/math`, `core/rig` and `core/format` (the shared loader error and, privately, JSON support), never on a physics backend, a game or a framework.
 
 ## Coding standards
 
@@ -184,10 +184,10 @@ Seven milestones take the project from an empty repository to a ragdoll that bal
 
 ### M2 Rig and profile formats
 
-- [ ] Schema documented in `docs/formats/`
-- [ ] Sample humanoid rig with bodies, masses and joint limits
-- [ ] Loader rejects invalid files with file, line and field
-- [ ] Round-trip test passes
+- [x] Schema documented in `docs/formats/` (`rig.md`, `profile.md`)
+- [x] Sample humanoid rig with bodies, masses and joint limits (`data/rigs/`, sources in its README)
+- [x] Loader rejects invalid files with file, line and field
+- [x] Round-trip test passes (locally on MSVC; first CI run pending, branch not pushed)
 
 ### M3 Ragdoll and motor solver
 
@@ -357,7 +357,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
-| 2026-10-18 | Full fork of OpenMW instead of an upstream component (decision 0004, toddhow); M7 becomes preparing the fork; M2 spec approved (`docs/tasks/0012`); core loaders may use nlohmann/json privately |
+| 2026-10-18 | Full fork of OpenMW instead of an upstream component (decision 0004, toddhow); M7 becomes preparing the fork; M2 spec approved (`docs/tasks/0012`); core loaders may use nlohmann/json privately; shared loader support moves to `core/format`, which `kinematic` may use |
 | 2026-10-18 | A7 v2: per-frame contact correction replaces pinned automatic markers; root alignment only from user or preset files (toddhow) |
 | 2026-10-18 | A7 automatic marker placement added (toddhow approved the spec); lighter workflow continues |
 | 2026-10-17 | A5 (body surfaces, fingers) and A6 (marker editor, presets) scheduled after A4 (toddhow); specs drafted |

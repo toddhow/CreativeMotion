@@ -64,6 +64,9 @@ std::optional<Problem> findOverrideProblem(const std::vector<Override>& override
         if (bone.empty()) {
             return Problem{pointer + "/bone", "must not be empty"};
         }
+        if (!detail::isValidName(bone)) {
+            return Problem{pointer + "/bone", detail::kInvalidNameMessage};
+        }
         if (!seen.insert(bone).second) {
             return Problem{pointer + "/bone", "duplicate override for bone " + inQuotes(bone)};
         }
@@ -82,6 +85,9 @@ std::optional<Problem> findProfileProblem(const Profile& profile)
 {
     if (profile.rig.empty()) {
         return Problem{"/rig", "must not be empty"};
+    }
+    if (!isValidName(profile.rig)) {
+        return Problem{"/rig", kInvalidNameMessage};
     }
     if (auto problem = findMotorProblem(profile.defaultMotor, "/defaults/motor")) {
         return problem;

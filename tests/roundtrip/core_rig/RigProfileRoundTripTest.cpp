@@ -79,4 +79,25 @@ TEST(RigRoundTrip, NegativeZeroIsWrittenAsZero)
     EXPECT_EQ(writeRig(rig), kRigText);
 }
 
+// Quotes, backslashes, JSON-pointer characters and non-ASCII UTF-8 in names
+// are escaped or passed through so the written file loads back as the same rig.
+TEST(RigRoundTrip, SpecialCharactersInNamesSurvive)
+{
+    const auto loaded = loadRig(kRigText, "synthetic.rig.json");
+    ASSERT_TRUE(loaded.ok()) << loaded.error.toString();
+    Rig rig = loaded.value.value_or(Rig{});
+    rig.name = R"(rig "quoted" \ back/slash~tilde)";
+    const std::string mid = "Mid-\xC3\x84-\xF0\x9F\xA6\xB4"; // "Mid-Ä-" and a 4-byte emoji
+    rig.skeleton.bones[1].name = mid;
+    rig.bodies[1].bone = mid;
+    rig.joints[0].bone = mid;
+    ASSERT_EQ(opas::rig::validateRig(rig), "");
+
+    const std::string text = writeRig(rig);
+    const auto reloaded = loadRig(text, "written.rig.json");
+    ASSERT_TRUE(reloaded.ok()) << reloaded.error.toString();
+    EXPECT_EQ(reloaded.value.value_or(Rig{}), rig);
+    EXPECT_EQ(writeRig(reloaded.value.value_or(Rig{})), text);
+}
+
 } // namespace

@@ -63,6 +63,9 @@ std::optional<Problem> findBoneProblem(const Skeleton& skeleton)
         if (bone.name.empty()) {
             return Problem{at("bones", i, "name"), "must not be empty"};
         }
+        if (!detail::isValidName(bone.name)) {
+            return Problem{at("bones", i, "name"), detail::kInvalidNameMessage};
+        }
         if (!seen.insert(bone.name).second) {
             return Problem{at("bones", i, "name"), "duplicate bone " + inQuotes(bone.name)};
         }
@@ -212,6 +215,9 @@ std::optional<Problem> findRigProblem(const Rig& rig)
 {
     if (rig.name.empty()) {
         return Problem{"/name", "must not be empty"};
+    }
+    if (!isValidName(rig.name)) {
+        return Problem{"/name", kInvalidNameMessage};
     }
     if (rig.skeleton.bones.empty()) {
         return Problem{"/bones", "needs at least one bone"};

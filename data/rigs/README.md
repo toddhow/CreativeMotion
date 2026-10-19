@@ -4,7 +4,7 @@
 
 A synthetic humanoid: 1.75 m tall, 75 kg, standing with its arms hanging down. It faces +Y with +X to its right and Z up, matching OpenMW and Bethesda content. No game skeleton and no game-derived rest pose is used. Bone names are generic.
 
-- **Bones:** 21. They are Pelvis, Spine, Chest, Neck and Head, plus on each side UpperArm, Forearm, Hand, Fingers, Thigh, Shin and Foot. Every rest rotation is the identity, so each bone's axes match the world axes in the rest pose.
+- **Bones:** 19. They are Pelvis, Spine, Chest, Neck and Head, plus on each side UpperArm, Forearm, Hand, Fingers, Thigh, Shin and Foot. Every rest rotation is the identity, so each bone's axes match the world axes in the rest pose.
 - **Bodies:** 16: three trunk bodies (pelvis, spine, chest, after de Leva's three trunk segments), the head, and six per side. Neck and Fingers are bones without bodies, so the head's joint connects it to the chest.
 - **Profile:** `data/profiles/humanoid-default.profile.json`. Its gains are placeholders until M3.
 
@@ -29,7 +29,7 @@ Mass is placed at each body's shape centre. de Leva's centre-of-mass positions a
 
 ### Lengths and shapes (estimates, not sourced)
 
-Bone offsets and shape sizes are round-number estimates. They are chosen so the figure stands 1.75 m tall, with the head top at about 1.755 m and the soles at z = 0. They are not taken from a published table. They only need to be plausible for the sandbox; real characters supply their own skeletons.
+Bone offsets and shape sizes are round-number estimates. They are chosen so the figure stands 1.75 m tall, with the head top at about 1.755 m and the soles at z = 0, and so no two bodies without a joint between them overlap in the rest pose (the shoulders sit at x = ±0.21 m and the trunk capsules are short for that reason; `SampleHumanoid.UnjointedBodiesDoNotOverlapAtRest` checks it). They are not taken from a published table. They only need to be plausible for the sandbox; real characters supply their own skeletons.
 
 ### Joint limits (sourced, with stated approximations)
 
@@ -39,9 +39,9 @@ Version 1 joints have symmetric swing cones centred on the rest pose (`docs/form
 
 | Joint (child bone) | Published range | In the file |
 | --- | --- | --- |
-| Spine, Chest (each) | trunk flexion 80°, extension 25°, side bend 35°, rotation 45° | each joint takes half: normal cone 0.46 (≈26°, *approx.*), plane cone 0.31 (≈17.5°), twist ±0.39 (≈22.5°) |
+| Spine, Chest (each) | trunk flexion 80°, extension 25°, side bend 35°, rotation 45° | each joint takes half: normal cone 0.46 (≈26°, *approx.*), plane cone 0.305 (≈17.5°), twist ±0.39 (≈22.5°) |
 | Head (from chest) | neck flexion 45°, extension 45°, side bend 45°, rotation 60° | normal 0.785 (45°), plane 0.785 (45°), twist ±1.047 (60°) |
-| UpperArm (shoulder) | flexion 180°, extension 60°, abduction 180°, internal rotation 70°, external rotation 90° | normal 1.571 (90°, *approx.*), plane 1.571 (90°, *approx.*), twist ±1.222 (70°, the smaller rotation, so the left and right sides need no sign convention yet) |
+| UpperArm (shoulder) | flexion 180°, extension 60°, abduction 180°, internal rotation 70°, external rotation 90° | normal 1.571 (90°, *approx.*: averaging flexion and extension as the other rows do would give 120°, letting the arm swing 120° backwards, so 90° is a deliberate compromise), plane 1.571 (90°, *approx.*, same reasoning), twist ±1.222 (70°, the smaller rotation, so the left and right sides need no sign convention yet) |
 | Forearm (elbow, hinge about +X) | flexion 0–150° | twist 0 to 2.618 (150°), cones 0 |
 | Hand (wrist) | flexion 80°, extension 70°, radial deviation 20°, ulnar deviation 30°; forearm pronation and supination 80° each | normal 1.309 (75°, *approx.*), plane 0.436 (25°, *approx.*), twist ±1.396 (80°; forearm rotation is placed at the wrist because the elbow is a hinge) |
 | Thigh (hip) | flexion 120°, extension 30°, abduction 45°, adduction 30°, internal and external rotation 45° each | normal 1.309 (75°, *approx.*), plane 0.654 (37.5°, *approx.*), twist ±0.785 (45°) |

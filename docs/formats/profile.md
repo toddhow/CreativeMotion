@@ -28,13 +28,13 @@ A profile is the tuning for one rig: how strongly its joint motors pull towards 
 | --- | --- | --- |
 | `format` | string | exactly `"opas.profile"` |
 | `version` | integer | `1` |
-| `rig` | string | non-empty; the `name` of the rig this profile is for |
+| `rig` | string | non-empty, without control characters (U+0000–U+001F, U+007F); the `name` of the rig this profile is for |
 | `defaults` | object | exactly `motor` and `material` |
 | `joints` | array | required; may be empty |
-| joint override `bone` | string | non-empty, unique among joint overrides; a bone with a joint in the rig |
+| joint override `bone` | string | non-empty, without control characters, unique among joint overrides; a bone with a joint in the rig |
 | joint override `motor` | motor object | replaces the default motor for that joint |
 | `bodies` | array | required; may be empty |
-| body override `bone` | string | non-empty, unique among body overrides; a bone with a body in the rig |
+| body override `bone` | string | non-empty, without control characters, unique among body overrides; a bone with a body in the rig |
 | body override `material` | material object | replaces the default material for that body |
 
 The motor object follows `opas::physics::JointMotor`: torque = stiffness × angle error − damping × relative angular velocity, clamped to `maxTorqueNm`.

@@ -8,11 +8,11 @@
     {"name": "Chest", "parent": "Spine", "translationM": [0, 0, 0.2], "rotation": [0, 0, 0, 1]},
     {"name": "Neck", "parent": "Chest", "translationM": [0, 0, 0.22], "rotation": [0, 0, 0, 1]},
     {"name": "Head", "parent": "Neck", "translationM": [0, 0, 0.07], "rotation": [0, 0, 0, 1]},
-    {"name": "LeftUpperArm", "parent": "Chest", "translationM": [-0.18, 0, 0.17], "rotation": [0, 0, 0, 1]},
+    {"name": "LeftUpperArm", "parent": "Chest", "translationM": [-0.21, 0, 0.17], "rotation": [0, 0, 0, 1]},
     {"name": "LeftForearm", "parent": "LeftUpperArm", "translationM": [0, 0, -0.29], "rotation": [0, 0, 0, 1]},
     {"name": "LeftHand", "parent": "LeftForearm", "translationM": [0, 0, -0.26], "rotation": [0, 0, 0, 1]},
     {"name": "LeftFingers", "parent": "LeftHand", "translationM": [0, 0, -0.1], "rotation": [0, 0, 0, 1]},
-    {"name": "RightUpperArm", "parent": "Chest", "translationM": [0.18, 0, 0.17], "rotation": [0, 0, 0, 1]},
+    {"name": "RightUpperArm", "parent": "Chest", "translationM": [0.21, 0, 0.17], "rotation": [0, 0, 0, 1]},
     {"name": "RightForearm", "parent": "RightUpperArm", "translationM": [0, 0, -0.29], "rotation": [0, 0, 0, 1]},
     {"name": "RightHand", "parent": "RightForearm", "translationM": [0, 0, -0.26], "rotation": [0, 0, 0, 1]},
     {"name": "RightFingers", "parent": "RightHand", "translationM": [0, 0, -0.1], "rotation": [0, 0, 0, 1]},
@@ -26,21 +26,21 @@
   "bodies": [
     {
       "bone": "Pelvis",
-      "shape": {"type": "capsule", "halfHeightM": 0.07, "radiusM": 0.11},
+      "shape": {"type": "capsule", "halfHeightM": 0.05, "radiusM": 0.11},
       "translationM": [0, 0, 0.04],
       "rotation": [0, 0.7071067811865476, 0, 0.7071067811865476],
       "massKg": 8.3775
     },
     {
       "bone": "Spine",
-      "shape": {"type": "capsule", "halfHeightM": 0.06, "radiusM": 0.11},
+      "shape": {"type": "capsule", "halfHeightM": 0.04, "radiusM": 0.11},
       "translationM": [0, 0, 0.1],
       "rotation": [0, 0.7071067811865476, 0, 0.7071067811865476],
       "massKg": 12.2475
     },
     {
       "bone": "Chest",
-      "shape": {"type": "capsule", "halfHeightM": 0.07, "radiusM": 0.12},
+      "shape": {"type": "capsule", "halfHeightM": 0.04, "radiusM": 0.12},
       "translationM": [0, 0, 0.11],
       "rotation": [0, 0.7071067811865476, 0, 0.7071067811865476],
       "massKg": 11.97
@@ -143,7 +143,7 @@
       "twistAxis": [0, 0, 1],
       "planeAxis": [1, 0, 0],
       "normalHalfConeRad": 0.46,
-      "planeHalfConeRad": 0.31,
+      "planeHalfConeRad": 0.305,
       "twistMinRad": -0.39,
       "twistMaxRad": 0.39
     },
@@ -152,7 +152,7 @@
       "twistAxis": [0, 0, 1],
       "planeAxis": [1, 0, 0],
       "normalHalfConeRad": 0.46,
-      "planeHalfConeRad": 0.31,
+      "planeHalfConeRad": 0.305,
       "twistMinRad": -0.39,
       "twistMaxRad": 0.39
     },
