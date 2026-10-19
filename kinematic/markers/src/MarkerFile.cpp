@@ -174,12 +174,6 @@ public:
 
 } // namespace
 
-std::string LoadError::toString() const
-{
-    return file + ":" + std::to_string(line) + ": " + (field.empty() ? "(document)" : field) +
-           ": " + message;
-}
-
 LoadResult loadMarkerSet(std::string_view text, std::string_view fileName)
 {
     LoadResult result;

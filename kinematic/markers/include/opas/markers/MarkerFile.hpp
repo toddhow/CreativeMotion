@@ -2,6 +2,7 @@
 
 // Reading and writing marker files (JSON). Format: docs/formats/markers.md.
 
+#include "opas/format/LoadError.hpp"
 #include "opas/markers/InteractionMarker.hpp"
 
 #include <cstddef>
@@ -12,16 +13,8 @@
 
 namespace opas::markers {
 
-// Where and why a file was rejected.
-struct LoadError {
-    std::string file;     // as passed by the caller
-    std::size_t line = 0; // 1-based
-    std::string field;    // JSON pointer, e.g. "/markers/2/toleranceM"; "" for the whole document
-    std::string message;
-
-    // "file:line: field: message"
-    [[nodiscard]] std::string toString() const;
-};
+// Where and why a file was rejected. Shared by every loader since M2.
+using LoadError = format::LoadError;
 
 struct LoadResult {
     std::optional<MarkerSet> value; // set on success

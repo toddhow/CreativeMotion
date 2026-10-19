@@ -1,4 +1,4 @@
-#include "JsonSupport.hpp"
+#include "opas/format/JsonSupport.hpp"
 
 #include <array>
 #include <charconv>
@@ -6,7 +6,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace opas::markers::detail {
+namespace opas::format::detail {
 
 std::string replaceOverflowingNumbers(std::string_view text)
 {
@@ -121,6 +121,11 @@ std::string vec3(const math::Vec3& v)
     return "[" + number(v.x) + ", " + number(v.y) + ", " + number(v.z) + "]";
 }
 
+std::string quat(const math::Quat& q)
+{
+    return "[" + number(q.x) + ", " + number(q.y) + ", " + number(q.z) + ", " + number(q.w) + "]";
+}
+
 std::string utf8FileName(const std::filesystem::path& path)
 {
     const std::u8string utf8 = path.u8string();
@@ -146,4 +151,4 @@ std::optional<std::string> readTextFile(const std::filesystem::path& path, LoadE
     }
 }
 
-} // namespace opas::markers::detail
+} // namespace opas::format::detail
