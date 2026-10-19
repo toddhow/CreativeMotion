@@ -357,6 +357,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-18 | M2 done: approved by toddhow and merged locally into a new `main` branch, which is created at the M2 tip and holds all earlier work (M0, M1, A1–A7) |
 | 2026-10-18 | Full fork of OpenMW instead of an upstream component (decision 0004, toddhow); M7 becomes preparing the fork; M2 spec approved (`docs/tasks/0012`); core loaders may use nlohmann/json privately; shared loader support moves to `core/format`, which `kinematic` may use |
 | 2026-10-18 | A7 v2: per-frame contact correction replaces pinned automatic markers; root alignment only from user or preset files (toddhow) |
 | 2026-10-18 | A7 automatic marker placement added (toddhow approved the spec); lighter workflow continues |
