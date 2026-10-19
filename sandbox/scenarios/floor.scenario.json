@@ -1,0 +1,24 @@
+{
+  "format": "opas.scenario",
+  "version": 1,
+  "name": "floor",
+  "stepsPerSecond": 60,
+  "durationS": 4,
+  "gravityMps2": [0, 0, -9.81],
+  "statics": [
+    {"name": "floor", "halfExtentsM": [20, 20, 0.5], "translationM": [0, 0, -0.5], "rotation": [0, 0, 0, 1], "friction": 0.8}
+  ],
+  "ragdolls": [
+    {
+      "name": "hero",
+      "rig": "../../data/rigs/humanoid.rig.json",
+      "profile": "../../data/profiles/humanoid-default.profile.json",
+      "translationM": [0, 0, 0.02],
+      "rotation": [0, 0, 0, 1],
+      "rootMotion": "dynamic",
+      "motors": "off",
+      "pose": "rest"
+    }
+  ],
+  "impulses": []
+}

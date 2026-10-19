@@ -10,6 +10,7 @@ add_executable(opas_tests
   unit/core_rig/ProfileLoadTest.cpp
   unit/core_motor/RagdollBuildTest.cpp
   unit/core_motor/RagdollBehaviourTest.cpp
+  unit/sandbox_runner/ScenarioLoadTest.cpp
   unit/kinematic_ik/TwoBoneIkTest.cpp
   unit/kinematic_ik/FingerCurlTest.cpp
   unit/kinematic_markers/CapsuleFitTest.cpp
@@ -43,6 +44,8 @@ add_executable(opas_tests
   property/core_motor/JointTargetPropertyTest.cpp
   roundtrip/core_rig/RigProfileRoundTripTest.cpp
   roundtrip/core_rig/SampleHumanoidTest.cpp
+  roundtrip/sandbox_runner/SandboxRoundTripTest.cpp
+  replay/ReplayGateTest.cpp
   roundtrip/kinematic_markers/BodyMapHumanoidRoundTripTest.cpp
   roundtrip/kinematic_markers/BodyMapRoundTripTest.cpp
   roundtrip/kinematic_markers/BodyMapFingersTest.cpp
@@ -57,6 +60,7 @@ target_link_libraries(opas_tests PRIVATE
   opas::math
   opas::rig
   opas::motor
+  opas::sandbox
   opas::ik
   opas::markers
   GTest::gtest_main
@@ -68,7 +72,8 @@ target_include_directories(opas_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common
 # sample rig and profile shipped in data/.
 target_compile_definitions(opas_tests PRIVATE
   OPAS_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
-  OPAS_REPO_DATA_DIR="${PROJECT_SOURCE_DIR}/data")
+  OPAS_REPO_DATA_DIR="${PROJECT_SOURCE_DIR}/data"
+  OPAS_SANDBOX_SCENARIO_DIR="${PROJECT_SOURCE_DIR}/sandbox/scenarios")
 opas_set_project_options(opas_tests)
 opas_copy_sanitizer_runtime(opas_tests)
 
@@ -186,4 +191,51 @@ if(TARGET opas_validate_markers)
   opas_add_tool_test(BodymapLoadErrorIsLocated 2
     "--markers|${V}/markers_pass.markers.json|--clip|${V}/clip.poseclip.json|--bodymap|${D}/bodymap/bad_radius.bodymap.json"
     "R1=bad_radius[.]bodymap[.]json:21: /ikChains/0/limbRadiusM: ")
+endif()
+
+# --- opas_run and the Replay gate (M4) -----------------------------------------
+# Each shipped scenario is run and compared with its golden recording; this is
+# the CI Replay gate (docs/tasks/0015). Exit codes: 0 match, 1 differs, 2 bad input.
+if(TARGET opas_run)
+  set(S "${PROJECT_SOURCE_DIR}/sandbox/scenarios")
+  set(G "${PROJECT_SOURCE_DIR}/data/recordings")
+  function(opas_add_run_test name exitCode args)
+    set(defs "")
+    foreach(extra IN LISTS ARGN)
+      list(APPEND defs "-D${extra}")
+    endforeach()
+    add_test(NAME ${name}
+      COMMAND ${CMAKE_COMMAND}
+        "-DTOOL=$<TARGET_FILE:opas_run>"
+        "-DARGS=${args}"
+        "-DEXPECT_EXIT=${exitCode}"
+        ${defs}
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/tools/RunTool.cmake")
+  endfunction()
+
+  foreach(scenario IN ITEMS floor stairs slope push)
+    opas_add_run_test(ReplayGate.${scenario} 0
+      "--scenario|${S}/${scenario}.scenario.json|--compare|${G}/${scenario}.recording.json"
+      "R1=MATCHES")
+  endforeach()
+
+  # Comparing against another scenario's golden differs (header mismatch).
+  opas_add_run_test(OpasRun.DifferentGoldenDiffers 1
+    "--scenario|${S}/floor.scenario.json|--compare|${G}/push.recording.json"
+    "R1=DIFFERS header: scenario")
+  # --record writes a file that matches the golden when compared again.
+  set(out "${CMAKE_CURRENT_BINARY_DIR}/opas_run_push.recording.json")
+  opas_add_run_test(OpasRun.Records 0
+    "--scenario|${S}/push.scenario.json|--record|${out}" "R1=recorded 181 states of 16 bodies")
+  # Bad input: exit 2.
+  opas_add_run_test(OpasRun.NoArguments 2 "")
+  opas_add_run_test(OpasRun.UnknownOption 2 "--scenario|${S}/push.scenario.json|--bogus|x")
+  opas_add_run_test(OpasRun.BothModes 2
+    "--scenario|${S}/push.scenario.json|--record|x|--compare|y")
+  opas_add_run_test(OpasRun.MissingScenario 2
+    "--scenario|${S}/does_not_exist.scenario.json|--compare|${G}/push.recording.json"
+    "R1=does_not_exist[.]scenario[.]json")
+  opas_add_run_test(OpasRun.MissingGolden 2
+    "--scenario|${S}/push.scenario.json|--compare|${G}/does_not_exist.recording.json"
+    "R1=does_not_exist[.]recording[.]json")
 endif()

@@ -198,9 +198,9 @@ Seven milestones take the project from an empty repository to a ragdoll that bal
 
 ### M4 Headless runner, record and replay
 
-- [ ] Scenario files for floor, stairs, slope and push
-- [ ] JSON recording of per-step body states
-- [ ] Replay gate in CI against golden recordings
+- [x] Scenario files for floor, stairs, slope and push (`sandbox/scenarios/`)
+- [x] JSON recording of per-step body states (`docs/formats/recording.md`)
+- [x] Replay gate in CI against golden recordings (ctest `ReplayGate.*`; passes on MSVC Debug and Release, first Linux CI run pending)
 
 ### M5 Sensors, balance and hit reaction
 

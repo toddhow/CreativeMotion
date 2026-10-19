@@ -1,7 +1,8 @@
 #include "opas/rig/RigFile.hpp"
 
-#include "FileReader.hpp"
-#include "FileWriter.hpp"
+#include "Problem.hpp"
+#include "opas/format/FileReader.hpp"
+#include "opas/format/FileWriter.hpp"
 
 #include <utility>
 #include <vector>
@@ -9,8 +10,8 @@
 namespace opas::rig {
 namespace {
 
-using detail::FileReader;
-using detail::Json;
+using format::detail::FileReader;
+using format::detail::Json;
 using format::detail::jsonString;
 using format::detail::number;
 using format::detail::quat;
@@ -177,7 +178,7 @@ public:
             return false;
         }
         if (const auto problem = detail::findRigProblem(out)) {
-            return failAt(root, *problem);
+            return failAt(root, problem->pointer, problem->message);
         }
         return true;
     }
@@ -248,30 +249,31 @@ std::string writeRig(const Rig& rig)
         "{\n  \"format\": \"opas.rig\",\n  \"version\": 1,\n  \"name\": " + jsonString(rig.name) +
         ",\n";
     out += "  \"bones\": " +
-           detail::arrayBlock(bones,
-                              [&bones](const Bone& b) {
-                                  const std::string parent =
-                                      b.parent >= 0 &&
-                                              static_cast<std::size_t>(b.parent) < bones.size()
-                                          ? bones[static_cast<std::size_t>(b.parent)].name
-                                          : std::string();
-                                  return "    {\"name\": " + jsonString(b.name) +
-                                         ", \"parent\": " + jsonString(parent) +
-                                         ", \"translationM\": " + vec3(b.localRest.translation) +
-                                         ", \"rotation\": " + quat(b.localRest.rotation) + "}";
-                              }) +
+           format::detail::arrayBlock(
+               bones,
+               [&bones](const Bone& b) {
+                   const std::string parent =
+                       b.parent >= 0 && static_cast<std::size_t>(b.parent) < bones.size()
+                           ? bones[static_cast<std::size_t>(b.parent)].name
+                           : std::string();
+                   return "    {\"name\": " + jsonString(b.name) +
+                          ", \"parent\": " + jsonString(parent) +
+                          ", \"translationM\": " + vec3(b.localRest.translation) +
+                          ", \"rotation\": " + quat(b.localRest.rotation) + "}";
+               }) +
            ",\n";
     out += "  \"bodies\": " +
-           detail::arrayBlock(rig.bodies,
-                              [](const Body& b) {
-                                  return "    {\n      \"bone\": " + jsonString(b.bone) +
-                                         ",\n      \"shape\": " + shapeText(b.shape) +
-                                         ",\n      \"translationM\": " + vec3(b.local.translation) +
-                                         ",\n      \"rotation\": " + quat(b.local.rotation) +
-                                         ",\n      \"massKg\": " + number(b.massKg) + "\n    }";
-                              }) +
+           format::detail::arrayBlock(
+               rig.bodies,
+               [](const Body& b) {
+                   return "    {\n      \"bone\": " + jsonString(b.bone) +
+                          ",\n      \"shape\": " + shapeText(b.shape) +
+                          ",\n      \"translationM\": " + vec3(b.local.translation) +
+                          ",\n      \"rotation\": " + quat(b.local.rotation) +
+                          ",\n      \"massKg\": " + number(b.massKg) + "\n    }";
+               }) +
            ",\n";
-    out += "  \"joints\": " + detail::arrayBlock(rig.joints, [](const Joint& j) {
+    out += "  \"joints\": " + format::detail::arrayBlock(rig.joints, [](const Joint& j) {
                return "    {\n      \"bone\": " + jsonString(j.bone) +
                       ",\n      \"twistAxis\": " + vec3(j.twistAxis) +
                       ",\n      \"planeAxis\": " + vec3(j.planeAxis) +

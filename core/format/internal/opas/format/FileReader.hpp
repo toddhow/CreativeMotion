@@ -1,9 +1,8 @@
 #pragma once
 
-// Internal: the shared JSON reader with the helpers the rig and profile
-// readers both use. Not a public header (it carries nlohmann/json).
-
-#include "Problem.hpp"
+// Internal: the shared JSON reader plus the helpers every versioned format
+// reader uses (rig, profile, scenario, recording). Moved from core/rig in M4.
+// Not a public header (it carries nlohmann/json).
 
 #include "opas/format/JsonSupport.hpp"
 
@@ -11,13 +10,12 @@
 #include <initializer_list>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
-namespace opas::rig::detail {
+namespace opas::format::detail {
 
-using format::detail::Json;
-
-class FileReader : public format::detail::JsonReader {
+class FileReader : public JsonReader {
 public:
     using JsonReader::JsonReader;
 
@@ -64,7 +62,7 @@ public:
         if (value == nullptr) {
             return false;
         }
-        if (!value->is_string() || value->get<std::string>() == format::detail::kNonFiniteValue) {
+        if (!value->is_string() || value->get<std::string>() == kNonFiniteValue) {
             return fail(*value, pointer + "/" + std::string(key), "must be a string");
         }
         out = value->get<std::string>();
@@ -129,14 +127,15 @@ public:
         return true;
     }
 
-    // Reports a rule found after reading (a Problem) at the line of the field
-    // its pointer names, or of the document if the pointer names no value.
-    bool failAt(const Json& root, const Problem& problem)
+    // Reports a rule found after reading at the line of the field `pointer`
+    // names, or of the document if the pointer names no value. The pointer
+    // must be well formed (built from fixed keys and indices).
+    bool failAt(const Json& root, const std::string& pointer, std::string message)
     {
-        const Json::json_pointer pointer(problem.pointer);
-        const Json& value = root.contains(pointer) ? root.at(pointer) : root;
-        return fail(value, problem.pointer, problem.message);
+        const Json::json_pointer at(pointer);
+        const Json& value = root.contains(at) ? root.at(at) : root;
+        return fail(value, pointer, std::move(message));
     }
 };
 
-} // namespace opas::rig::detail
+} // namespace opas::format::detail

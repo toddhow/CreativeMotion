@@ -254,6 +254,9 @@ std::string utf8FileName(const std::filesystem::path& path);
 std::string number(double value);
 // A JSON string literal (quotes included), escaping what JSON requires.
 std::string jsonString(std::string_view text);
+// Shortest text that reads back as exactly the same float (recordings store
+// physics floats). Negative zero is written "0", as number() does.
+std::string floatNumber(float value);
 // "[x, y, z]"
 std::string vec3(const math::Vec3& v);
 // "[x, y, z, w]"

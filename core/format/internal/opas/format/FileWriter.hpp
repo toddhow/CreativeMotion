@@ -1,11 +1,12 @@
 #pragma once
 
-// Internal: canonical-text helpers shared by the rig and profile writers.
+// Internal: canonical-text helpers shared by the format writers.
 
+#include <cstddef>
 #include <string>
 #include <vector>
 
-namespace opas::rig::detail {
+namespace opas::format::detail {
 
 // The value of a top-level array: "[]" when empty, else one entry per element
 // (each produced by `write`, already indented), comma-separated, one per line.
@@ -24,4 +25,4 @@ std::string arrayBlock(const std::vector<Item>& items, Write write)
     return out;
 }
 
-} // namespace opas::rig::detail
+} // namespace opas::format::detail

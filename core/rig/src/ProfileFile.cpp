@@ -1,15 +1,16 @@
 #include "opas/rig/ProfileFile.hpp"
 
-#include "FileReader.hpp"
-#include "FileWriter.hpp"
+#include "Problem.hpp"
+#include "opas/format/FileReader.hpp"
+#include "opas/format/FileWriter.hpp"
 
 #include <utility>
 
 namespace opas::rig {
 namespace {
 
-using detail::FileReader;
-using detail::Json;
+using format::detail::FileReader;
+using format::detail::Json;
 using format::detail::jsonString;
 using format::detail::number;
 
@@ -91,7 +92,7 @@ public:
             return false;
         }
         if (const auto problem = detail::findProfileProblem(out)) {
-            return failAt(root, *problem);
+            return failAt(root, problem->pointer, problem->message);
         }
         return true;
     }
@@ -145,13 +146,13 @@ std::string writeProfile(const Profile& profile)
     out += "  \"defaults\": {\n    \"motor\": " + motorText(profile.defaultMotor) +
            ",\n    \"material\": " + materialText(profile.defaultMaterial) + "\n  },\n";
     out += "  \"joints\": " +
-           detail::arrayBlock(profile.joints,
-                              [](const JointOverride& o) {
-                                  return "    {\"bone\": " + jsonString(o.bone) +
-                                         ", \"motor\": " + motorText(o.motor) + "}";
-                              }) +
+           format::detail::arrayBlock(profile.joints,
+                                      [](const JointOverride& o) {
+                                          return "    {\"bone\": " + jsonString(o.bone) +
+                                                 ", \"motor\": " + motorText(o.motor) + "}";
+                                      }) +
            ",\n";
-    out += "  \"bodies\": " + detail::arrayBlock(profile.bodies, [](const BodyOverride& o) {
+    out += "  \"bodies\": " + format::detail::arrayBlock(profile.bodies, [](const BodyOverride& o) {
                return "    {\"bone\": " + jsonString(o.bone) +
                       ", \"material\": " + materialText(o.material) + "}";
            });

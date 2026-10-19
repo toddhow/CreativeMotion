@@ -1,0 +1,25 @@
+{
+  "format": "opas.scenario",
+  "version": 1,
+  "name": "slope",
+  "stepsPerSecond": 60,
+  "durationS": 4,
+  "gravityMps2": [0, 0, -9.81],
+  "statics": [
+    {"name": "floor", "halfExtentsM": [20, 20, 0.5], "translationM": [0, 0, -1.8], "rotation": [0, 0, 0, 1], "friction": 0.8},
+    {"name": "slope", "halfExtentsM": [2, 3, 0.25], "translationM": [0, 0, 0], "rotation": [-0.173648, 0, 0, 0.984808], "friction": 0.1}
+  ],
+  "ragdolls": [
+    {
+      "name": "hero",
+      "rig": "../../data/rigs/humanoid.rig.json",
+      "profile": "../../data/profiles/humanoid-default.profile.json",
+      "translationM": [0, -1.530698, 1.057291],
+      "rotation": [-0.819152, 0, 0, 0.573576],
+      "rootMotion": "dynamic",
+      "motors": "profile",
+      "pose": "rest"
+    }
+  ],
+  "impulses": []
+}

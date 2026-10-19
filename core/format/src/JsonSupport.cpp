@@ -73,6 +73,16 @@ std::string number(double value)
     return std::string(buffer.data(), result.ptr);
 }
 
+std::string floatNumber(float value)
+{
+    if (value == 0.0f) {
+        return "0";
+    }
+    std::array<char, 32> buffer{};
+    const auto result = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value);
+    return std::string(buffer.data(), result.ptr);
+}
+
 std::string jsonString(std::string_view text)
 {
     std::string out = "\"";
