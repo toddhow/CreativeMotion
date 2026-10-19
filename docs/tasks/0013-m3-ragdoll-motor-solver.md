@@ -1,5 +1,5 @@
 # Task: M3 Ragdoll and motor solver
-Status: approved by toddhow on 2026-10-18 with all four proposals: collision groups in the interface, 0.10/0.20 rad tolerances with a kinematic pelvis, lopsided limits as a separate task after M3, and the builder in core/motor. Lighter loop: the implementing agent writes the tests and one fresh review runs at the end of the milestone.
+Status: done. toddhow approved the result and the merge on 2026-10-18, including the 30 Hz against 120 Hz rule as implemented; merged locally into main, not pushed. Spec approved by toddhow on 2026-10-18 with all four proposals: collision groups in the interface, 0.10/0.20 rad tolerances with a kinematic pelvis, lopsided limits as a separate task after M3, and the builder in core/motor. Lighter loop: the implementing agent writes the tests and one fresh review runs at the end of the milestone.
 Design doc section: CLAUDE.md → "First milestones" → M3; OpenMW Animation System — Implementation Doc → "Animation component" (the motor solver row turns targets into Jolt motor settings).
 Goal: the sample rig becomes a ragdoll in a physics world, and a motor solver makes it follow an animated target pose every physics step, stably at 30, 60 and 120 Hz and without heap allocation per step.
 Inputs / outputs:
@@ -102,6 +102,6 @@ Out of scope:
   - A new test shows a failed build frees its joints as well.
   - Smaller fixes: `Ragdoll` is move-only; `driveTowardsPose` returns false on a pose of the wrong size; `computeWorldPoseInto` writes nothing if its spans are short; the builder checks the collision filter call; group IDs cannot reach Jolt's invalid ID; `destroyRagdoll` during a step is tested.
 - **Open, for toddhow:**
-  - (a) Sign-off on the 30 Hz against 120 Hz rule as implemented (above).
+  - (a) The 30 Hz against 120 Hz rule as implemented: signed off by toddhow on 2026-10-18.
   - (b) Tracking at 30 Hz has a 6% margin (0.094 against 0.10 rad), so watch the first Linux CI run.
   - (c) The allocation test counts `operator new` only. Jolt's own allocations go through `JPH::Allocate` (malloc) and are not counted. Counting them needs a hook in `physics/jolt`, since tests may not include Jolt headers.
