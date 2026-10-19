@@ -90,8 +90,11 @@ public:
     virtual bool setJointMotor(JointId joint, const JointMotor& motor) = 0;
     // Target rotation of body B's joint frame relative to body A's joint frame.
     // Identity means "the relative pose the joint was created in". Expressed
-    // in joint-frame axes: X = twistAxis, Y = planeAxis, Z = X cross Y, so a
-    // pure twist of angle a is a rotation of a about X.
+    // in joint-frame axes: X = twistAxis, Y = planeAxis cross twistAxis,
+    // Z = planeAxis (Jolt's constraint space, SwingTwistConstraint.cpp; M1
+    // documented Y and Z the wrong way round, corrected in M3). So a
+    // pure twist of angle a is a rotation of a about X; a swing about Y is
+    // limited by planeHalfConeRad and a swing about Z by normalHalfConeRad.
     virtual bool setJointTarget(JointId joint, Quat targetRotation) = 0;
 
     // --- Drive bodies --------------------------------------------------------

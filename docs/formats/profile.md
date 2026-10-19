@@ -59,7 +59,7 @@ All fields are required, unknown keys are errors, and numbers must be finite.
 
 - **Whole objects only:** an override replaces the whole `motor` or `material` object of one bone. Fields are never merged one by one, so the values that apply to a bone are always written in one place. `motorFor` and `materialFor` return the override if there is one, else the default.
 - **Checking against the rig:** whether `rig` matches and every overridden bone has a joint or body needs the rig, so `loadProfile` does not check it. Call `validateProfile(profile, rig)` once both are loaded. It reports a mismatched name at `/rig` and a bad override at its `bone`.
-- **Sample values:** the gains in `data/profiles/humanoid-default.profile.json` are placeholders, to be tuned in M3 when tracking is measured.
+- **Sample values:** the gains in `data/profiles/humanoid-default.profile.json` were tuned in M3 against the arm-wave tracking test at 30, 60 and 120 Hz (default 450/30; trunk 900/60; hands 50/5). Raising stiffness without damping makes light limbs oscillate at 60 Hz; see `core/motor/CLAUDE.md`.
 - **Later versions:** M5 adds balance and hit-reaction sections as version 2. Version 1 files keep loading.
 
 ## Errors

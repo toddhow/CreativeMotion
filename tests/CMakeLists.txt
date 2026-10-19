@@ -8,6 +8,8 @@ add_executable(opas_tests
   unit/core_rig/SkeletonTest.cpp
   unit/core_rig/RigLoadTest.cpp
   unit/core_rig/ProfileLoadTest.cpp
+  unit/core_motor/RagdollBuildTest.cpp
+  unit/core_motor/RagdollBehaviourTest.cpp
   unit/kinematic_ik/TwoBoneIkTest.cpp
   unit/kinematic_ik/FingerCurlTest.cpp
   unit/kinematic_markers/CapsuleFitTest.cpp
@@ -38,6 +40,7 @@ add_executable(opas_tests
   unit/physics_jolt/ValidationTest.cpp
   property/core_math/QuatNormalizationPropertyTest.cpp
   property/kinematic_ik/TwoBoneIkPropertyTest.cpp
+  property/core_motor/JointTargetPropertyTest.cpp
   roundtrip/core_rig/RigProfileRoundTripTest.cpp
   roundtrip/core_rig/SampleHumanoidTest.cpp
   roundtrip/kinematic_markers/BodyMapHumanoidRoundTripTest.cpp
@@ -53,6 +56,7 @@ target_link_libraries(opas_tests PRIVATE
   opas::physics_jolt
   opas::math
   opas::rig
+  opas::motor
   opas::ik
   opas::markers
   GTest::gtest_main
@@ -83,11 +87,31 @@ target_link_libraries(opas_interface_tests PRIVATE
 opas_set_project_options(opas_interface_tests)
 opas_copy_sanitizer_runtime(opas_interface_tests)
 
+# Allocation-counter runner (M3). It replaces the global operator new/delete
+# with counting versions (alloc/CountingNew.cpp), which must not leak into
+# opas_tests, so it is its own executable.
+add_executable(opas_alloc_tests
+  alloc/CountingNew.cpp
+  alloc/StepAllocationTest.cpp
+)
+target_link_libraries(opas_alloc_tests PRIVATE
+  opas::physics_jolt
+  opas::motor
+  opas::rig
+  GTest::gtest_main
+)
+target_include_directories(opas_alloc_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common)
+target_compile_definitions(opas_alloc_tests PRIVATE
+  OPAS_REPO_DATA_DIR="${PROJECT_SOURCE_DIR}/data")
+opas_set_project_options(opas_alloc_tests)
+opas_copy_sanitizer_runtime(opas_alloc_tests)
+
 include(GoogleTest)
 # DISCOVERY_MODE PRE_TEST lists tests when ctest runs rather than at build time,
 # which keeps sanitizer builds from failing during the build step.
 gtest_discover_tests(opas_tests DISCOVERY_MODE PRE_TEST)
 gtest_discover_tests(opas_interface_tests DISCOVERY_MODE PRE_TEST)
+gtest_discover_tests(opas_alloc_tests DISCOVERY_MODE PRE_TEST)
 
 # --- Command-line tool tests (A4b) -------------------------------------------
 # opas_validate_markers is run by tools/RunTool.cmake, which checks the exit code

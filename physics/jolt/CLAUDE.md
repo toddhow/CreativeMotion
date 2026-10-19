@@ -11,3 +11,5 @@ The only module allowed to include Jolt headers or link the `Jolt` target.
 ## Pitfalls
 - Jolt compiles with RTTI and exceptions off by default; that only applies inside Jolt's own targets, not ours.
 - Jolt's public compile definitions (`JPH_*`) flow to us through the `Jolt` target. Never redefine them by hand, or Jolt's headers and library will disagree on layouts.
+- Swing-twist constraint space is X = twist, Y = plane × twist, Z = plane axis (`SwingTwistConstraint.cpp` constructor). Targets passed to `SetTargetOrientationCS` use that frame; M1's interface comment had Y and Z swapped until M3.
+- Collision groups: one `GroupFilterTable` per group, shared by reference count with its bodies. The Jolt group ID is a serial number that is never reused, so bodies of a destroyed group are never mistaken for members of a new group in a reused slot. `GroupFilterTable::DisableCollision` wants the smaller sub-group first.

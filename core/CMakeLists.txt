@@ -2,3 +2,4 @@
 add_subdirectory(math)
 add_subdirectory(format)
 add_subdirectory(rig)
+add_subdirectory(motor)

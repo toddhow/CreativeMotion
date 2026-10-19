@@ -6,7 +6,7 @@ A synthetic humanoid: 1.75 m tall, 75 kg, standing with its arms hanging down. I
 
 - **Bones:** 19. They are Pelvis, Spine, Chest, Neck and Head, plus on each side UpperArm, Forearm, Hand, Fingers, Thigh, Shin and Foot. Every rest rotation is the identity, so each bone's axes match the world axes in the rest pose.
 - **Bodies:** 16: three trunk bodies (pelvis, spine, chest, after de Leva's three trunk segments), the head, and six per side. Neck and Fingers are bones without bodies, so the head's joint connects it to the chest.
-- **Profile:** `data/profiles/humanoid-default.profile.json`. Its gains are placeholders until M3.
+- **Profile:** `data/profiles/humanoid-default.profile.json`, with gains tuned in M3 (`docs/formats/profile.md`).
 
 ### Masses (sourced)
 
@@ -48,4 +48,4 @@ Version 1 joints have symmetric swing cones centred on the rest pose (`docs/form
 | Shin (knee, hinge about +X) | flexion 0–135° | twist −2.356 to 0 (135°; with the shin hanging down, rotating about +X by a negative angle swings the foot backwards), cones 0 |
 | Foot (ankle) | dorsiflexion 20°, plantar flexion 50°, inversion 35°, eversion 15° | normal 0.611 (35°, *approx.*), plane 0.436 (25°, *approx.*), twist ±0.175 (10°, an estimate; the published table has no matching motion) |
 
-The hinge signs follow the right-hand rule about +X in the rest pose. Whether Jolt's swing-twist constraint measures twist with the same sign is checked in M3, when the rig first drives a ragdoll.
+The hinge signs follow the right-hand rule about +X in the rest pose. M3 confirmed them against Jolt (`RagdollHinges.KneeBendsBackwardsWithNegativeTwist`).

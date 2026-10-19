@@ -3,12 +3,12 @@
   "version": 1,
   "rig": "humanoid",
   "defaults": {
-    "motor": {"stiffnessNmPerRad": 300, "dampingNmsPerRad": 30, "maxTorqueNm": 500},
+    "motor": {"stiffnessNmPerRad": 450, "dampingNmsPerRad": 30, "maxTorqueNm": 500},
     "material": {"friction": 0.8, "restitution": 0, "linearDamping": 0.05, "angularDamping": 0.05}
   },
   "joints": [
-    {"bone": "Spine", "motor": {"stiffnessNmPerRad": 600, "dampingNmsPerRad": 60, "maxTorqueNm": 900}},
-    {"bone": "Chest", "motor": {"stiffnessNmPerRad": 600, "dampingNmsPerRad": 60, "maxTorqueNm": 900}},
+    {"bone": "Spine", "motor": {"stiffnessNmPerRad": 900, "dampingNmsPerRad": 60, "maxTorqueNm": 900}},
+    {"bone": "Chest", "motor": {"stiffnessNmPerRad": 900, "dampingNmsPerRad": 60, "maxTorqueNm": 900}},
     {"bone": "LeftHand", "motor": {"stiffnessNmPerRad": 50, "dampingNmsPerRad": 5, "maxTorqueNm": 60}},
     {"bone": "RightHand", "motor": {"stiffnessNmPerRad": 50, "dampingNmsPerRad": 5, "maxTorqueNm": 60}}
   ],

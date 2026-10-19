@@ -38,9 +38,8 @@ opas_enable_sanitizers_globally()
 include(OpasDependencies)
 
 add_subdirectory(core)
-if(OPAS_BUILD_PHYSICS)
-  add_subdirectory(physics)
-endif()
+# Always added: the interface is needed by core/motor; Jolt only with OPAS_BUILD_PHYSICS.
+add_subdirectory(physics)
 add_subdirectory(kinematic)
 if(PROJECT_IS_TOP_LEVEL)
   add_subdirectory(tools/validate_markers)

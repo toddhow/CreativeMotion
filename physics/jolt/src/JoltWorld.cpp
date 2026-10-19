@@ -687,8 +687,10 @@ CreateResult<CollisionGroupId> JoltWorld::createCollisionGroup(std::uint32_t sub
         return failure<CollisionGroupId>(ErrorCode::CapacityExceeded,
                                          "too many collision groups (limit maxBodies)");
     }
+    // Jolt objects are reference counted (JPH::Ref); everything collides at first.
+    const JPH::Ref<JPH::GroupFilterTable> table = new JPH::GroupFilterTable(subGroupCount);
     GroupSlot& slot = groupSlots_[*index];
-    slot.table = new JPH::GroupFilterTable(subGroupCount); // everything collides at first
+    slot.table = table;
     slot.alive = true;
     slot.subGroupCount = subGroupCount;
     slot.joltGroupId = nextGroupId_++;
@@ -699,7 +701,7 @@ CreateResult<CollisionGroupId> JoltWorld::createCollisionGroup(std::uint32_t sub
 bool JoltWorld::setSubGroupsCollide(CollisionGroupId group, std::uint32_t a, std::uint32_t b,
                                     bool collide)
 {
-    GroupSlot* slot = findGroup(group);
+    const GroupSlot* slot = findGroup(group);
     if (inStep_ || slot == nullptr || a == b || a >= slot->subGroupCount ||
         b >= slot->subGroupCount) {
         return false;
@@ -777,7 +779,8 @@ bool JoltWorld::setJointTarget(JointId joint, Quat targetRotation)
         return false;
     }
     // Jolt's "constraint space" target: body B's joint frame relative to body
-    // A's, with the twist axis as local X and the plane axis as local Y.
+    // A's: X = twist axis, Y = plane x twist, Z = plane axis (Jolt builds it
+    // that way in the SwingTwistConstraint constructor).
     slot->constraint->SetTargetOrientationCS(toJolt(targetRotation).Normalized());
     wakeJointBodies(*slot);
     return true;
