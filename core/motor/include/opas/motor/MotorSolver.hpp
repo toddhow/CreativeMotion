@@ -18,8 +18,9 @@ namespace opas::motor {
 // skeleton bone, like Skeleton::localRest; translations are ignored because
 // joints only rotate). Bones without bodies still count through forward
 // kinematics. A kinematic root body is also moved to its target. Allocates
-// nothing; call it from a pre-step listener.
-void driveTowardsPose(physics::PhysicsWorld& world, Ragdoll& ragdoll,
+// nothing; call it from a pre-step listener. Returns false, and does
+// nothing, if localPose does not have one entry per skeleton bone.
+bool driveTowardsPose(physics::PhysicsWorld& world, Ragdoll& ragdoll,
                       std::span<const math::Transform> localPose);
 
 // Fills `localPose` (one entry per skeleton bone) with the target pose for

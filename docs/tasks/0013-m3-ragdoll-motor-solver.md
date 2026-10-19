@@ -96,3 +96,12 @@ Out of scope:
 - **Property test gains:** 2000/200 with self-collision off. With 2000/60 the light arms kept oscillating at 60 Hz, missing by up to 0.8 rad; 2000/200, 600/60, 300/30, and 2000/60 at 240 Hz all settled.
 - **30 Hz against 120 Hz rule:** checked on the whole body's RMS error, and per joint where the 120 Hz error is at least 0.01 rad. The soft hand's error, 0.024 rad at 30 Hz against under 0.005 at 120 Hz, makes a strict per-joint ratio meaningless; both values are far inside the tolerance.
 - **Allocations:** `opas_alloc_tests` counts zero `operator new` calls over 600 driven steps, for a kinematic-root ragdoll and for a falling one.
+- **Milestone review (fresh subagent), findings fixed:**
+  - `createCollisionGroup` now rejects more than `min(maxBodies, 65536)` sub-groups; beyond that, Jolt's bit table overflows its 32-bit sizing (heap corruption).
+  - The 75 kg check now measures each physics body's mass through the world, with an impulse and the change in velocity.
+  - A new test shows a failed build frees its joints as well.
+  - Smaller fixes: `Ragdoll` is move-only; `driveTowardsPose` returns false on a pose of the wrong size; `computeWorldPoseInto` writes nothing if its spans are short; the builder checks the collision filter call; group IDs cannot reach Jolt's invalid ID; `destroyRagdoll` during a step is tested.
+- **Open, for toddhow:**
+  - (a) Sign-off on the 30 Hz against 120 Hz rule as implemented (above).
+  - (b) Tracking at 30 Hz has a 6% margin (0.094 against 0.10 rad), so watch the first Linux CI run.
+  - (c) The allocation test counts `operator new` only. Jolt's own allocations go through `JPH::Allocate` (malloc) and are not counted. Counting them needs a hook in `physics/jolt`, since tests may not include Jolt headers.

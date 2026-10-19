@@ -55,8 +55,9 @@ enum class ErrorCode : std::uint8_t {
     None,
     InvalidDescription, // a field of a BodyDesc / JointDesc / WorldConfig is out of range
     InvalidHandle,      // a handle is invalid or refers to a destroyed object
-    CapacityExceeded,   // WorldConfig::maxBodies or maxJoints reached
-    CalledDuringStep,   // structural change attempted from a step callback
+    CapacityExceeded, // WorldConfig::maxBodies or maxJoints reached (collision groups count against
+                      // maxBodies)
+    CalledDuringStep, // structural change attempted from a step callback
 };
 
 // Result of a create call. On failure `id` is invalid and `message` names the

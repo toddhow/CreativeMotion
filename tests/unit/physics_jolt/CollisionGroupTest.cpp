@@ -131,6 +131,18 @@ TEST(JoltCollisionGroups, RejectsBadArguments)
     const auto world = makeWorld(zeroGravityConfig());
     ASSERT_NE(world, nullptr);
     EXPECT_EQ(world->createCollisionGroup(0).error, ErrorCode::InvalidDescription);
+    // More sub-groups than bodies, or so many that Jolt's bit table would
+    // overflow (N * (N - 1) wraps 32 bits at 70000), are rejected.
+    EXPECT_EQ(world->createCollisionGroup(1025).error, ErrorCode::InvalidDescription);
+    {
+        WorldConfig big;
+        big.maxBodies = 100000;
+        const auto bigWorld = makeWorld(big);
+        ASSERT_NE(bigWorld, nullptr);
+        EXPECT_EQ(bigWorld->createCollisionGroup(70000).error, ErrorCode::InvalidDescription);
+        // (65536 itself would be accepted, but its table is 268 MB.)
+        EXPECT_EQ(bigWorld->createCollisionGroup(65537).error, ErrorCode::InvalidDescription);
+    }
     const auto group = world->createCollisionGroup(2);
     ASSERT_TRUE(group.ok());
     EXPECT_FALSE(world->setSubGroupsCollide(group.id, 0, 0, false));

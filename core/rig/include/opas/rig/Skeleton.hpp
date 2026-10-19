@@ -48,7 +48,8 @@ std::vector<math::Transform> computeWorldPose(const Skeleton& skeleton,
                                               const math::Transform& root);
 
 // As computeWorldPose, but writes into `out` (out.size() == bones.size())
-// instead of allocating, for per-step use.
+// instead of allocating, for per-step use. Writes nothing if localPose or out
+// has fewer entries than bones.
 void computeWorldPoseInto(const Skeleton& skeleton, std::span<const math::Transform> localPose,
                           const math::Transform& root, std::span<math::Transform> out);
 

@@ -59,6 +59,11 @@ constexpr JPH::uint kJointPositionSteps = 10;
 
 constexpr float kPi = std::numbers::pi_v<float>;
 
+// Most sub-groups in one collision group: 65536 * 65535 / 2 bits is the
+// largest table whose size fits Jolt's 32-bit arithmetic and int bit index
+// (GroupFilterTable.h, constructor and GetBit).
+constexpr std::uint32_t kMaxSubGroups = 65536;
+
 // --- Collision layers -----------------------------------------------------------
 // Two layers, as in Jolt's HelloWorld sample: static bodies never need to be
 // tested against each other.
@@ -677,9 +682,15 @@ CreateResult<CollisionGroupId> JoltWorld::createCollisionGroup(std::uint32_t sub
             ErrorCode::CalledDuringStep,
             "createCollisionGroup cannot be called from a step listener");
     }
-    if (subGroupCount == 0) {
+    // A sub-group only matters with a body in it, so maxBodies bounds the
+    // count, and kMaxSubGroups keeps Jolt's bit table from overflowing.
+    if (subGroupCount == 0 || subGroupCount > std::min(config_.maxBodies, kMaxSubGroups)) {
         return failure<CollisionGroupId>(ErrorCode::InvalidDescription,
-                                         "subGroupCount must be > 0");
+                                         "subGroupCount must be in [1, min(maxBodies, 65536)]");
+    }
+    if (nextGroupId_ == JPH::CollisionGroup::cInvalidGroup) {
+        return failure<CollisionGroupId>(ErrorCode::CapacityExceeded,
+                                         "collision group IDs are used up");
     }
     const std::optional<std::uint32_t> index =
         takeSlot(groupSlots_, freeGroupSlots_, config_.maxBodies);
@@ -687,7 +698,9 @@ CreateResult<CollisionGroupId> JoltWorld::createCollisionGroup(std::uint32_t sub
         return failure<CollisionGroupId>(ErrorCode::CapacityExceeded,
                                          "too many collision groups (limit maxBodies)");
     }
-    // Jolt objects are reference counted (JPH::Ref); everything collides at first.
+    // Jolt objects are reference counted: the Ref takes ownership of the new
+    // table at once (Jolt's idiom, as for the shape settings above), so this
+    // is not the raw ownership the guide forbids. Everything collides at first.
     const JPH::Ref<JPH::GroupFilterTable> table = new JPH::GroupFilterTable(subGroupCount);
     GroupSlot& slot = groupSlots_[*index];
     slot.table = table;

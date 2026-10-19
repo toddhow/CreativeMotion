@@ -166,8 +166,12 @@ BuildResult buildRagdoll(physics::PhysicsWorld& world, const rig::Rig& rig,
                            "joint on \"" + joint.bone + "\": motor gains rejected");
         }
         // Jointed neighbours overlap at their shared joint; let them pass.
-        world.setSubGroupsCollide(group.id, static_cast<std::uint32_t>(parent),
-                                  static_cast<std::uint32_t>(child), false);
+        if (!world.setSubGroupsCollide(group.id, static_cast<std::uint32_t>(parent),
+                                       static_cast<std::uint32_t>(child), false)) {
+            undo(world, ragdoll);
+            return failure(physics::ErrorCode::InvalidHandle,
+                           "joint on \"" + joint.bone + "\": collision filter rejected");
+        }
     }
 
     BuildResult result;

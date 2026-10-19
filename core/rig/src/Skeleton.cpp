@@ -79,6 +79,9 @@ std::vector<math::Transform> computeWorldPose(const Skeleton& skeleton,
 void computeWorldPoseInto(const Skeleton& skeleton, std::span<const math::Transform> localPose,
                           const math::Transform& root, std::span<math::Transform> out)
 {
+    if (localPose.size() < skeleton.bones.size() || out.size() < skeleton.bones.size()) {
+        return; // precondition broken: write nothing rather than read or write out of bounds
+    }
     for (std::size_t i = 0; i < skeleton.bones.size(); ++i) {
         const int parent = skeleton.bones[i].parent;
         // Parents come first, so out[parent] is already computed; root bones

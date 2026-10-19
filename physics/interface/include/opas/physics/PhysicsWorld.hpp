@@ -78,7 +78,7 @@ public:
     // group collide unless they share a sub-group or their sub-groups were set
     // not to; bodies in different groups, or in none, always collide. A new
     // group lets every pair of different sub-groups collide.
-    // subGroupCount must be > 0.
+    // subGroupCount must be in [1, min(WorldConfig::maxBodies, 65536)].
     virtual CreateResult<CollisionGroupId> createCollisionGroup(std::uint32_t subGroupCount) = 0;
     // False for a stale group, a sub-group >= subGroupCount, a == b, or during a step.
     virtual bool setSubGroupsCollide(CollisionGroupId group, std::uint32_t a, std::uint32_t b,

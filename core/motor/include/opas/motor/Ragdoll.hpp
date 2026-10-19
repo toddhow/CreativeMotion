@@ -49,7 +49,16 @@ struct RagdollJoint {
     math::Quat frameModel;
 };
 
+// Move-only: a copy would share the world's handles, and destroying both
+// copies would destroy the bodies twice.
 struct Ragdoll {
+    Ragdoll() = default;
+    Ragdoll(const Ragdoll&) = delete;
+    Ragdoll& operator=(const Ragdoll&) = delete;
+    Ragdoll(Ragdoll&&) noexcept = default;
+    Ragdoll& operator=(Ragdoll&&) noexcept = default;
+    ~Ragdoll() = default;
+
     std::vector<RagdollBody> bodies;
     std::vector<RagdollJoint> joints;
     physics::CollisionGroupId collisionGroup;

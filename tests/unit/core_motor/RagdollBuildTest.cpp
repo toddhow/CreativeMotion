@@ -58,11 +58,6 @@ TEST(RagdollBuild, SampleRigGivesOneBodyPerRigBodyAtTheRestPose)
                   1e-5)
             << rig.bodies[i].bone;
     }
-    double totalKg = 0.0;
-    for (const auto& body : rig.bodies) {
-        totalKg += body.massKg;
-    }
-    EXPECT_NEAR(totalKg, 75.0, 1e-9);
 }
 
 TEST(RagdollBuild, EveryJointReadsIdentityAtRest)
@@ -165,6 +160,101 @@ TEST(RagdollBuild, JointedNeighboursDoNotPushEachOtherApart)
         EXPECT_LT(test::length(state.linearVelocityMps), 0.01);
         EXPECT_LT(test::length(state.angularVelocityRadps), 0.01);
     }
+}
+
+// Mass as the physics world sees it: with every joint removed and no
+// gravity, an impulse through a body's centre changes its velocity by
+// impulse / mass (Jolt applies AddImpulse to the velocity at once).
+TEST(RagdollBuild, PhysicsBodiesCarryTheRigMassesAndTotal75Kg)
+{
+    const auto world = makeWorldAtHz(60, false);
+    ASSERT_NE(world, nullptr);
+    const rig::Rig rig = sampleRig();
+    const motor::Ragdoll ragdoll = buildOrFail(*world, rig, sampleProfile(), math::Transform{});
+    for (const auto& joint : ragdoll.joints) {
+        ASSERT_TRUE(world->destroyJoint(joint.id));
+    }
+    const float impulseNs = 10.0f;
+    double totalKg = 0.0;
+    for (std::size_t i = 0; i < ragdoll.bodies.size(); ++i) {
+        physics::BodyState before;
+        ASSERT_TRUE(world->readBody(ragdoll.bodies[i].id, before));
+        ASSERT_TRUE(world->applyImpulse(ragdoll.bodies[i].id, physics::Vec3{impulseNs, 0.0f, 0.0f},
+                                        before.positionM));
+        physics::BodyState after;
+        ASSERT_TRUE(world->readBody(ragdoll.bodies[i].id, after));
+        const double deltaVMps = after.linearVelocityMps.x - before.linearVelocityMps.x;
+        ASSERT_GT(deltaVMps, 0.0) << rig.bodies[i].bone;
+        const double massKg = impulseNs / deltaVMps;
+        EXPECT_NEAR(massKg, rig.bodies[i].massKg, 1e-4 * rig.bodies[i].massKg)
+            << rig.bodies[i].bone;
+        totalKg += massKg;
+    }
+    EXPECT_NEAR(totalKg, 75.0, 0.01);
+}
+
+// Joints are freed too: in a world with room for exactly one ragdoll's
+// joints, they can all be created again after the failed build.
+TEST(RagdollBuild, FailedBuildFreesItsJoints)
+{
+    physics::WorldConfig config;
+    config.maxBodies = 32;
+    config.maxJoints = 5; // the sixth joint fails
+    const auto world = physics::jolt::createJoltWorld(config);
+    ASSERT_NE(world, nullptr);
+    ASSERT_FALSE(motor::buildRagdoll(*world, sampleRig(), sampleProfile(), math::Transform{}).ok());
+    std::vector<physics::BodyId> bodies;
+    for (int i = 0; i < 6; ++i) {
+        physics::BodyDesc desc;
+        desc.positionM = physics::Vec3{static_cast<float>(i) * 3.0f, 0.0f, 50.0f};
+        const auto body = world->createBody(desc);
+        ASSERT_TRUE(body.ok()) << body.message;
+        bodies.push_back(body.id);
+    }
+    for (int i = 0; i < 5; ++i) {
+        physics::JointDesc joint;
+        joint.bodyA = bodies[static_cast<std::size_t>(i)];
+        joint.bodyB = bodies[static_cast<std::size_t>(i) + 1];
+        joint.anchorM = physics::Vec3{static_cast<float>(i) * 3.0f + 1.5f, 0.0f, 50.0f};
+        EXPECT_TRUE(world->createJoint(joint).ok()) << "joint " << i;
+    }
+}
+
+class DestroyDuringStep final : public physics::StepListener {
+public:
+    explicit DestroyDuringStep(motor::Ragdoll& ragdoll) : ragdoll_(&ragdoll) {}
+    void onPreStep(physics::PhysicsWorld& world, float /*dtSeconds*/) override
+    {
+        result = motor::destroyRagdoll(world, *ragdoll_);
+    }
+    void onPostStep(physics::PhysicsWorld& /*world*/, float /*dtSeconds*/) override {}
+    bool result = true;
+
+private:
+    motor::Ragdoll* ragdoll_;
+};
+
+TEST(RagdollBuild, DestroyDuringAStepKeepsTheHandles)
+{
+    const auto world = makeWorldAtHz(60);
+    ASSERT_NE(world, nullptr);
+    motor::Ragdoll ragdoll = buildOrFail(*world, sampleRig(), sampleProfile(), math::Transform{});
+    DestroyDuringStep listener(ragdoll);
+    const auto id = world->addStepListener(listener);
+    world->step();
+    EXPECT_TRUE(world->removeStepListener(id));
+    EXPECT_FALSE(listener.result);
+    ASSERT_EQ(ragdoll.bodies.size(), 16U); // kept, so the host can try again
+    EXPECT_TRUE(motor::destroyRagdoll(*world, ragdoll));
+}
+
+TEST(RagdollBuild, DrivingWithAWrongSizedPoseDoesNothing)
+{
+    const auto world = makeWorldAtHz(60);
+    ASSERT_NE(world, nullptr);
+    motor::Ragdoll ragdoll = buildOrFail(*world, sampleRig(), sampleProfile(), math::Transform{});
+    const std::vector<math::Transform> tooShort(3);
+    EXPECT_FALSE(motor::driveTowardsPose(*world, ragdoll, tooShort));
 }
 
 } // namespace

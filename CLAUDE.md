@@ -191,10 +191,10 @@ Seven milestones take the project from an empty repository to a ragdoll that bal
 
 ### M3 Ragdoll and motor solver
 
-- [ ] The sample rig builds a ragdoll that falls and settles on the floor
-- [ ] The motor solver tracks a procedural target pose (such as an arm wave) within the spec's tolerance
-- [ ] Tracking stays stable at 30, 60 and 120 Hz physics steps
-- [ ] No heap allocation in the per-step update, checked by an allocation counter in tests
+- [x] The sample rig builds a ragdoll that falls and settles on the floor
+- [x] The motor solver tracks a procedural target pose (such as an arm wave) within the spec's tolerance (`docs/tasks/0013`)
+- [x] Tracking stays stable at 30, 60 and 120 Hz physics steps (locally on MSVC; first CI run pending, branch not pushed)
+- [x] No heap allocation in the per-step update, checked by an allocation counter in tests (`operator new`; Jolt's own allocator hooks are not yet counted)
 
 ### M4 Headless runner, record and replay
 

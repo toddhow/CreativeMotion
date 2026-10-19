@@ -70,7 +70,7 @@ TEST(JointTargetProperty, StiffMotorsReachRandomTargetsWithinLimits)
 {
     const rig::Rig rig = test::sampleRig();
     rig::Profile stiff = test::sampleProfile();
-    // Stiff relative to the default profile (300), and well damped. Measured
+    // Stiff relative to the default profile (450), and well damped. Measured
     // while writing M3 (8 s, worst joint error over the last 3 s, 60 Hz):
     // 2000/60 kept the light arms oscillating (0.81 rad) while 2000/200,
     // 2000/600, 600/60 and 300/30 all settled to 0.001 rad or better, as did

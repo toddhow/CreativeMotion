@@ -6,9 +6,13 @@
 
 namespace opas::motor {
 
-void driveTowardsPose(physics::PhysicsWorld& world, Ragdoll& ragdoll,
+bool driveTowardsPose(physics::PhysicsWorld& world, Ragdoll& ragdoll,
                       std::span<const math::Transform> localPose)
 {
+    if (localPose.size() != ragdoll.skeleton.bones.size() ||
+        ragdoll.poseModel.size() != ragdoll.skeleton.bones.size()) {
+        return false;
+    }
     // Model-space pose (root = identity): joint targets depend only on
     // relative rotations, so the root's placement cancels out.
     rig::computeWorldPoseInto(ragdoll.skeleton, localPose, math::Transform{}, ragdoll.poseModel);
@@ -30,6 +34,7 @@ void driveTowardsPose(physics::PhysicsWorld& world, Ragdoll& ragdoll,
         world.setKinematicTarget(ragdoll.bodies[ragdoll.rootBody].id,
                                  toPhysics(rootTarget.translation), toPhysics(rootTarget.rotation));
     }
+    return true;
 }
 
 RagdollDriver::RagdollDriver(Ragdoll& ragdoll, PoseSource source)
