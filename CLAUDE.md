@@ -89,7 +89,7 @@ Dependencies point one way, and the physics interface is the boundary that keeps
 
 &#91;embedded content: module dependencies · arrows point to what a module depends on\]
 
-- **One direction:** `core` depends only on `physics/interface` and the standard library; `physics/jolt` depends on `physics/interface` and Jolt; `sandbox` and `tests` may depend on everything. Nothing depends on `sandbox`.
+- **One direction:** `core` depends only on `physics/interface` and the standard library, plus nlohmann/json as a private dependency of file loaders (toddhow, 2026-10-18; never in a public header); `physics/jolt` depends on `physics/interface` and Jolt; `sandbox` and `tests` may depend on everything. Nothing depends on `sandbox`.
 - **No engine types in the core:** `core` never includes Jolt, OpenMW or rendering headers and uses its own math types.
 - **Interface stays thin:** `physics/interface` is headers only, with no third-party types in its signatures.
 - **Data, not code:** characters, rigs and tuning come from rig and profile files; no hard-coded character data.
@@ -273,13 +273,13 @@ After M1, a side track builds actor alignment for paired animations in Skyrim: t
 
 After M6, work moves into OpenMW in milestones that mirror the phases in OpenMW Animation System — Implementation Doc. None of them are active yet: each gets a full task spec with acceptance criteria before work starts.
 
-**Gate:** work starts only when Jolt (merge request !3919) is merged into OpenMW and the OpenMW maintainers have answered the component proposal, deciding upstream or the modding-focused fork.
+**Gate:** none upstream. The system goes into a full fork of OpenMW built on the Jolt branch (`docs/decisions/0004-total-fork-of-openmw.md`, toddhow 2026-10-18); work starts after M6.
 
-### M7 Propose and prepare
+### M7 Prepare the fork
 
-- [ ] Design proposal posted to OpenMW (GitLab or Discord): the component, its hook points, opt-in settings
-- [ ] Upstream-or-fork decision recorded in `docs/decisions/`
-- [ ] OpenMW builds locally and in CI on the Jolt branch
+- [x] Upstream-or-fork decision recorded in `docs/decisions/` (0004: full fork)
+- [ ] Fork name chosen and the fork repository set up from the Jolt branch
+- [ ] The fork builds locally and in CI
 
 ### M8 Move the core into OpenMW
 
@@ -357,6 +357,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-18 | Full fork of OpenMW instead of an upstream component (decision 0004, toddhow); M7 becomes preparing the fork; M2 spec approved (`docs/tasks/0012`); core loaders may use nlohmann/json privately |
 | 2026-10-18 | A7 v2: per-frame contact correction replaces pinned automatic markers; root alignment only from user or preset files (toddhow) |
 | 2026-10-18 | A7 automatic marker placement added (toddhow approved the spec); lighter workflow continues |
 | 2026-10-17 | A5 (body surfaces, fingers) and A6 (marker editor, presets) scheduled after A4 (toddhow); specs drafted |
