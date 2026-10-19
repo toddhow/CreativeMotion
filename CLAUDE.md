@@ -357,6 +357,7 @@ Claude Code should raise these with toddhow when a task depends on one, rather t
 
 | Date | Change |
 | --- | --- |
+| 2026-10-19 | M4 done: headless runner, scenario and recording formats, four scenarios with golden recordings, replay and determinism gates; approved by toddhow (including the stairs push and slope setup) and merged locally into main |
 | 2026-10-18 | M3 done: ragdoll builder, motor solver, collision groups in the physics interface; approved by toddhow (including the 30 Hz against 120 Hz rule as implemented) and merged locally into main |
 | 2026-10-18 | M2 done: approved by toddhow and merged locally into a new `main` branch, which is created at the M2 tip and holds all earlier work (M0, M1, A1–A7) |
 | 2026-10-18 | Full fork of OpenMW instead of an upstream component (decision 0004, toddhow); M7 becomes preparing the fork; M2 spec approved (`docs/tasks/0012`); core loaders may use nlohmann/json privately; shared loader support moves to `core/format`, which `kinematic` may use |

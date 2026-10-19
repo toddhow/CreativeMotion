@@ -1,5 +1,5 @@
 # Task: M4 Headless runner, record and replay
-Status: approved by toddhow on 2026-10-18 with all four proposals. Tolerances are 1 mm, 0.01 rad, 0.01 m/s and 0.05 rad/s, against goldens recorded on MSVC, with per-platform goldens as the fallback if Linux fails. All 13 numbers are recorded per body per step. Pose sources are named and built in. Each ragdoll has a `motors` option. Lighter loop: the implementing agent writes the tests and one fresh review runs at the end of the milestone.
+Status: done. toddhow approved the result and the merge on 2026-10-19, including the stairs push and the slope setup; merged locally into main, not pushed. Spec approved by toddhow on 2026-10-18 with all four proposals. Tolerances are 1 mm, 0.01 rad, 0.01 m/s and 0.05 rad/s, against goldens recorded on MSVC, with per-platform goldens as the fallback if Linux fails. All 13 numbers are recorded per body per step. Pose sources are named and built in. Each ragdoll has a `motors` option. Lighter loop: the implementing agent writes the tests and one fresh review runs at the end of the milestone.
 Design doc section: CLAUDE.md → "First milestones" → M4, and "Testing and quality gates" (the Replay and Determinism gates). Golden recordings change only in a pull request that says why, reviewed by toddhow.
 Goal: scenarios are data files. A headless runner plays them deterministically and writes a JSON recording of every body's state each step. CI replays the scenarios and compares them with golden recordings, so any change in physical behaviour is caught.
 Inputs / outputs:
@@ -141,5 +141,5 @@ Out of scope:
   - New tool tests: the first per-step difference is printed, the recorded file is byte-identical to the golden on Windows, and an option given twice is an error. `armWave` is now exercised in process.
   - Smaller fixes: static-box errors carry their line, `opas_run` checks the write after closing the file, and a stale comment on world capacity is corrected.
 - **Open:**
-  - toddhow to confirm the scenario details above.
+  - Scenario details above: confirmed by toddhow on 2026-10-19.
   - The first Linux CI run will show whether the shared MSVC goldens hold within tolerance, or whether the approved fallback (per-platform goldens) is needed.
